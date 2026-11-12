@@ -205,6 +205,120 @@ Error: Process completed with exit code 1.
 
 ---
 
+## Interação 10 — Planejamento do painel
+
+**Data:** 12-11-2026
+**Objetivo:** Definir o layout e os requisitos do painel (index.html).
+
+**Prompt enviado à IA:**
+
+```
+ok como vamos fazer o painel?
+```
+
+**Resumo da resposta:** A IA propôs o layout: faixa de última atualização (tabela `execucoes`), filtros por local/ano/busca, cartões de resumo, gráfico de choques por ano empilhado por local (mostrando o ciclo solar) e tabela de eventos. Listou requisitos técnicos: `escapeHtml()`, paginação (limite de 1000 linhas do Supabase) e uso apenas da publishable key.
+
+**O que funcionou:** O layout e o alerta sobre o limite de 1000 linhas por consulta.
+
+**O que precisou ajuste:** —
+
+---
+
+## Interação 11 — Entendimento dos dados da API
+
+**Data:** 12-11-2026
+**Objetivo:** Entender exatamente o que a API IPS fornece.
+
+**Prompt enviado à IA:**
+
+```
+ok uma duvida o que api mostra? exatamente
+```
+
+**Resumo da resposta:** A IA explicou o fenômeno físico (choque no vento solar causado por CMEs ou correntes de vento rápido), descreveu cada campo com um exemplo real de maio/2024 (locais de detecção, instrumentos, eventos ligados, catálogos) e destacou que a API não traz grandezas físicas, apenas ocorrência, local, instrumentos e relações.
+
+**O que funcionou:** A explicação dos campos, útil para a apresentação.
+
+**O que precisou ajuste:** A IA corrigiu uma informação dada antes: o catálogo que aparece nos dados reais é `M2M_CATALOG`, e não `SWRC_CATALOG`.
+
+---
+
+## Interação 12 — Mapa 3D e dados físicos
+
+**Data:** 12-11-2026
+**Objetivo:** Avaliar um mapa 3D do Sistema Solar e fontes de dados físicos.
+
+**Prompt enviado à IA:**
+
+```
+teria como adicionar uma mapa 3d do sistema solar onde ocorre esses eventos? exite como conseguir os dados fisicos?
+```
+
+**Resumo da resposta:** A IA propôs um mapa 3D com Three.js e comparou duas formas de obter as posições (cálculo aproximado por Kepler × JPL Horizons). Para dados físicos, sugeriu DONKI/CME (velocidade da CME), DONKI/GST (índice Kp), OMNIWeb (vento solar) e o banco de choques de Helsinki, com a viabilidade de cada um.
+
+**O que funcionou:** A comparação de custo/benefício das fontes.
+
+**O que precisou ajuste:** —
+
+---
+
+## Interação 13 — Uso de outras APIs segundo o enunciado
+
+**Data:** 12-11-2026
+**Objetivo:** Verificar se o enunciado permite usar APIs complementares.
+
+**Prompt enviado à IA:**
+
+```
+segundo o documento que te mandei no inicio posso usar outra api?
+```
+
+**Resumo da resposta:** A IA citou os trechos do enunciado ("uma API aberta", "uma API diferente para cada grupo"), concluiu que o documento não proíbe nem autoriza explicitamente, alertou que DONKI/CME e DONKI/GST são as APIs dos Grupos 03 e 04 e recomendou consultar o professor.
+
+**O que funcionou:** A leitura cuidadosa do enunciado e o alerta sobre as APIs de outros grupos.
+
+**O que precisou ajuste:** —
+
+---
+
+## Interação 14 — Impacto no desempenho do site
+
+**Data:** 12-11-2026
+**Objetivo:** Saber se o enriquecimento deixaria o site mais lento.
+
+**Prompt enviado à IA:**
+
+```
+uma pergunta esse fluxo de dados caso implementado atrasaria o site?
+```
+
+**Resumo da resposta:** A IA explicou que o enriquecimento roda no pipeline (GitHub Actions) e fica gravado no banco, então o site só lê o Supabase; o custo extra fica na execução agendada. Buscar dados da NASA direto no navegador é que deixaria o site lento e exporia a chave.
+
+**O que funcionou:** O argumento de arquitetura, aproveitado para a apresentação.
+
+**O que precisou ajuste:** —
+
+---
+
+## Interação 15 — Enriquecimento com DONKI/CME, DONKI/GST e JPL Horizons
+
+**Data:** 12-11-2026
+**Objetivo:** Implementar o enriquecimento dos dados de cada choque.
+
+**Prompt enviado à IA:**
+
+```
+ok vamos implementar o JPL Horizons, e o DONKI/CME e o DONKI/GST
+```
+
+**Resumo da resposta:** A IA adicionou 14 colunas ao `setup.sql` (via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`) e reescreveu o `fetch_nasa.py`: lê os IDs de CME/GST no `linkedEvents`, baixa só as janelas de datas necessárias, escolhe a CME mais rápida e o maior Kp, e consulta o JPL Horizons em lotes de 25 instantes para obter a posição da nave e da Terra. Cada etapa é isolada: uma falha não derruba as outras e é registrada em `execucoes`.
+
+**O que funcionou:** Testes com APIs simuladas (casos normais, Horizons fora do ar e formato inesperado) passaram.
+
+**O que precisou ajuste:** A IA não conseguiu consultar a documentação das APIs CME/GST/Horizons durante o desenvolvimento, então usou janelas de 30 dias por segurança. No primeiro teste, uma data sem efeméride (normal) era tratada como falha geral; a IA corrigiu para tratá-la como aviso.
+
+---
+
 <!-- Repita o bloco acima para cada interação com a IA -->
 
 &nbsp;

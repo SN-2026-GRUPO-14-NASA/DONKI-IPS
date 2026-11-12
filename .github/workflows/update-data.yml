@@ -29,7 +29,7 @@ concurrency:
 jobs:
   coletar:
     runs-on: ubuntu-latest
-    timeout-minutes: 15   # Boa prática: limite de tempo
+    timeout-minutes: 30   # Boa prática: limite de tempo (carga histórica + enriquecimento ~10 min)
 
     steps:
       - name: Baixar o repositório

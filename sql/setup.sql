@@ -41,7 +41,28 @@ create table if not exists public.ips_eventos (
     constraint ips_eventos_activity_id_key unique (activity_id)
 );
 
-comment on table  public.ips_eventos is 'Choques interplanetários (NASA DONKI/IPS)';
+-- Colunas de enriquecimento (dados físicos). Usamos ALTER ... IF NOT EXISTS
+-- para que o script funcione tanto num banco novo quanto num que já tem a tabela.
+alter table public.ips_eventos
+    -- DONKI/CME: ejeção de massa coronal que causou o choque (a mais rápida, se houver várias)
+    add column if not exists cme_id            text,
+    add column if not exists cme_velocidade    real,   -- km/s
+    add column if not exists cme_latitude      real,   -- graus (direção, coordenadas de Stonyhurst)
+    add column if not exists cme_longitude     real,   -- graus (0 = direção da Terra)
+    add column if not exists cme_meia_largura  real,   -- graus (meia abertura angular do cone)
+    add column if not exists cme_tipo          text,   -- classificação por velocidade: S, C, O, R, ER
+    -- DONKI/GST: tempestade geomagnética causada pelo choque
+    add column if not exists gst_id            text,
+    add column if not exists kp_max            real,   -- índice Kp máximo (0 a 9)
+    -- JPL Horizons: posições heliocêntricas, plano da eclíptica J2000, em UA
+    add column if not exists nave_x            double precision,  -- nave que detectou o choque
+    add column if not exists nave_y            double precision,
+    add column if not exists nave_z            double precision,
+    add column if not exists terra_x           double precision,  -- Terra no mesmo instante
+    add column if not exists terra_y           double precision,
+    add column if not exists terra_z           double precision;
+
+comment on table  public.ips_eventos is 'Choques interplanetários (NASA DONKI/IPS), enriquecidos com DONKI/CME, DONKI/GST e JPL Horizons';
 comment on column public.ips_eventos.activity_id is 'Chave natural da API (activityID) — usada no upsert';
 
 -- Índices para os filtros e ordenações do painel
