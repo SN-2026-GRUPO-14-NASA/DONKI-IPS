@@ -162,7 +162,7 @@ ok vamos fazer sql
 faça
 ```
 
-**Resumo da resposta:** A IA gerou o script em Python (biblioteca `requests`, usando a API REST do Supabase). Ele busca a API em janelas de 180 dias (carga histórica desde 2010 quando o banco está vazio; últimos 60 dias nas execuções agendadas), normaliza os campos, deduplica por `activity_id` mantendo o maior `versionId` (evita o erro 21000), faz upsert em lotes de 500, registra a execução em `execucoes` e sai com `sys.exit(1)` em caso de erro. Gerou também o workflow com `cron` diário, `workflow_dispatch` (com datas opcionais), `permissions: contents: read`, `concurrency` e `timeout-minutes`.
+**Resumo da resposta:** A IA gerou o script em Python (biblioteca `requests`, usando a API REST do Supabase). Ele busca a API em janelas de 60 dias (carga histórica desde 2010 quando o banco está vazio; últimos 60 dias nas execuções agendadas), normaliza os campos, deduplica por `activity_id` mantendo o maior `versionId` (evita o erro 21000), faz upsert em lotes de 500, registra a execução em `execucoes` e sai com `sys.exit(1)` em caso de erro. Gerou também o workflow com `cron` diário, `workflow_dispatch` (com datas opcionais), `permissions: contents: read`, `concurrency` e `timeout-minutes`.
 
 Trecho da deduplicação:
 
@@ -179,6 +179,29 @@ def deduplicar(registros):
 **O que funcionou:** A IA testou o script com dados simulados: duplicatas removidas, resposta vazia tratada como `concluido`, evento sem `activityID` descartado e falha de lote gerando `erro_critico` com saída 1.
 
 **O que precisou ajuste:** O primeiro teste da própria IA estava errado (os dados simulados não caíam na janela de datas certa) e foi corrigido. A pasta `.github` não pôde ser gravada pela IA no computador do grupo, então o arquivo do workflow foi movido manualmente.
+
+---
+
+## Interação 9 — Erro: limite de 60 dias da API
+
+**Data:** 12-11-2026
+**Objetivo:** Corrigir a primeira execução do workflow, que terminou com `erro_parcial`.
+
+**Prompt enviado à IA:** (log do GitHub Actions colado na conversa)
+
+```
+[11:47:37]   ERRO na janela 2010-01-01 a 2010-06-29: HTTP 400: API Error: Date range cannot exceed 60 days. You requested 179 days.
+...
+[11:48:08]   2026-10-04 a 2026-11-12: 9 evento(s)
+[11:48:09] Fim: status=erro_parcial | processados=9 | lotes=1 | erros=34
+Error: Process completed with exit code 1.
+```
+
+**Resumo da resposta:** A IA identificou que o erro era dela: usou janelas de 180 dias, mas a API DONKI/IPS aceita no máximo 60 dias por consulta. Alterou `TAMANHO_JANELA_DIAS` para 60 (carga histórica passa a ter 103 janelas).
+
+**O que funcionou:** O log mostrou que a conexão com o Supabase, o upsert e o registro em `execucoes` funcionaram (9 eventos gravados), e que o tratamento de erro se comportou como esperado: o workflow ficou vermelho com `erro_parcial`.
+
+**O que precisou ajuste:** A IA assumiu um limite de datas sem verificar na documentação nem testar janelas grandes. O limite só apareceu na execução real — boa prova de que o teste com dados simulados não substitui o teste com a API verdadeira.
 
 ---
 

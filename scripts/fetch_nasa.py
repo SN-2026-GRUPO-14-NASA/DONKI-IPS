@@ -37,7 +37,7 @@ TABELA_EXECUCOES = "execucoes"
 
 INICIO_HISTORICO = date(2010, 1, 1)   # DONKI tem registros a partir de ~2010
 DIAS_ATUALIZACAO = 60                 # janela das execuções agendadas
-TAMANHO_JANELA_DIAS = 180             # cada chamada à API cobre até 180 dias
+TAMANHO_JANELA_DIAS = 60              # a API DONKI/IPS aceita no máximo 60 dias por consulta
 TAMANHO_LOTE = 500                    # registros por upsert
 TENTATIVAS = 3                        # tentativas por chamada HTTP
 TIMEOUT_HTTP = 60                     # segundos
