@@ -132,6 +132,25 @@ essa pasta é a do projeto  e esse é o link do git conecte e faça as subpastas
 
 ---
 
+## Interação 7 — Script SQL do banco (setup.sql)
+
+**Data:** 12-11-2026
+**Objetivo:** Gerar o `sql/setup.sql` com tabela principal, tabela de log, constraint UNIQUE, RLS e GRANTs.
+
+**Prompt enviado à IA:**
+
+```
+ok vamos fazer sql
+```
+
+**Resumo da resposta:** A IA consultou a API para confirmar os campos reais e gerou o script com as tabelas `ips_eventos` (UNIQUE em `activity_id`, listas `instruments` e `linked_events` como `text[]`) e `execucoes` (registros, lotes, erros e status com CHECK), RLS ativo com política de leitura pública e GRANTs (SELECT para anon/authenticated, ALL para service_role). O script é idempotente.
+
+**O que funcionou:** ...
+
+**O que precisou ajuste:** Ao consultar a API, apareceram campos não previstos na Interação 2 (`submissionTime`, `versionId`, `sentNotifications`); os dois primeiros foram incluídos na tabela.
+
+---
+
 <!-- Repita o bloco acima para cada interação com a IA -->
 
 &nbsp;
