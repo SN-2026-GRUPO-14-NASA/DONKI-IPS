@@ -11,6 +11,7 @@ O que faz:
        a. DONKI/CME  -> velocidade, direção e largura da CME que causou o choque
        b. DONKI/GST  -> Kp máximo da tempestade geomagnética causada pelo choque
        c. JPL Horizons -> posição 3D (UA) da nave que detectou o choque e da Terra
+       d. Cálculo próprio -> tempo de viagem da CME (Sol -> nave) e velocidade média
   6. Envia ao Supabase em lotes, com upsert (on_conflict=activity_id).
   7. Finaliza o registro em `execucoes` com contadores e status.
   8. Sai com sys.exit(1) se houver qualquer erro (falha visível no Actions).
@@ -58,6 +59,10 @@ HORIZONS_ID = {
 }
 ID_TERRA = "399"
 DIST_L1_UA = 0.01   # L1 fica ~1,5 milhão de km (0,01 UA) da Terra, em direção ao Sol
+KM_POR_UA = 149_597_870.7
+# Distância típica ao Sol (UA) quando não há posição do Horizons
+DIST_APROX_UA = {"Earth": 0.99, "STEREO A": 0.96, "STEREO B": 1.04}
+VIAGEM_MIN_H, VIAGEM_MAX_H = 12, 168   # fora disso, o vínculo CME-choque é suspeito
 
 
 def log(msg):
@@ -219,6 +224,7 @@ def numero(valor):
 # Colunas de enriquecimento — sempre presentes (o upsert em lote exige as mesmas chaves)
 COLUNAS_ENRIQ = (
     "cme_id", "cme_velocidade", "cme_latitude", "cme_longitude", "cme_meia_largura", "cme_tipo",
+    "cme_inicio", "tempo_viagem_h", "cme_velocidade_media",
     "gst_id", "kp_max",
     "nave_x", "nave_y", "nave_z", "terra_x", "terra_y", "terra_z",
 )
@@ -342,6 +348,9 @@ def enriquecer_cme_gst(registros, nasa_key, info):
                 "cme_longitude": numero(a.get("longitude")),
                 "cme_meia_largura": numero(a.get("halfAngle")),
                 "cme_tipo": a.get("type"),
+                # startTime da CME (se faltar, usa o horário embutido no próprio ID)
+                "cme_inicio": converter_data(cmes[cme_id].get("startTime"))
+                              or converter_data(cme_id[:16] + "Z"),
             })
             com_cme += 1
 
@@ -478,6 +487,30 @@ def enriquecer_posicoes(registros, info):
 
 
 # ---------------------------------------------------------------------------
+# Enriquecimento 4 — tempo de viagem e velocidade média da CME (cálculo próprio)
+# ---------------------------------------------------------------------------
+def calcular_viagem(registros):
+    """tempo = chegada do choque - saída da CME; velocidade média = distância / tempo.
+    Comparada à velocidade inicial (cme_velocidade), mostra se a CME freou ou acelerou."""
+    calculados = 0
+    for r in registros:
+        if not r.get("cme_inicio"):
+            continue
+        horas = (datetime.fromisoformat(r["event_time"]) - datetime.fromisoformat(r["cme_inicio"])).total_seconds() / 3600
+        if not VIAGEM_MIN_H <= horas <= VIAGEM_MAX_H:
+            continue
+        if r.get("nave_x") is not None:
+            dist_ua = math.sqrt(r["nave_x"] ** 2 + r["nave_y"] ** 2 + r["nave_z"] ** 2)
+        else:
+            dist_ua = DIST_APROX_UA.get(r["location"])
+        r["tempo_viagem_h"] = round(horas, 2)
+        if dist_ua:
+            r["cme_velocidade_media"] = round(dist_ua * KM_POR_UA / (horas * 3600), 1)
+        calculados += 1
+    log(f"Tempo de viagem da CME calculado para {calculados} choque(s)")
+
+
+# ---------------------------------------------------------------------------
 # Execução principal
 # ---------------------------------------------------------------------------
 def definir_periodo(db):
@@ -552,7 +585,8 @@ def main():
     # 4. Enriquecimento (cada etapa isolada: uma falha não derruba as outras)
     if unicos:
         for etapa, funcao in (("CME/GST", lambda: enriquecer_cme_gst(unicos, nasa_key, info)),
-                              ("Horizons", lambda: enriquecer_posicoes(unicos, info))):
+                              ("Horizons", lambda: enriquecer_posicoes(unicos, info)),
+                              ("viagem", lambda: calcular_viagem(unicos))):
             try:
                 funcao()
             except Exception as e:

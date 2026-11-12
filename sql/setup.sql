@@ -51,6 +51,9 @@ alter table public.ips_eventos
     add column if not exists cme_longitude     real,   -- graus (0 = direção da Terra)
     add column if not exists cme_meia_largura  real,   -- graus (meia abertura angular do cone)
     add column if not exists cme_tipo          text,   -- classificação por velocidade: S, C, O, R, ER
+    add column if not exists cme_inicio        timestamptz,  -- quando a CME saiu do Sol
+    add column if not exists tempo_viagem_h    real,   -- horas do Sol até a nave (event_time - cme_inicio)
+    add column if not exists cme_velocidade_media real, -- km/s: distância Sol-nave / tempo de viagem
     -- DONKI/GST: tempestade geomagnética causada pelo choque
     add column if not exists gst_id            text,
     add column if not exists kp_max            real,   -- índice Kp máximo (0 a 9)

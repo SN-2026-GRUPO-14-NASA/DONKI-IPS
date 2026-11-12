@@ -357,6 +357,25 @@ esquece o apoastro vamos pensar independentemente, https://xxbwvcqpdvdrqmwyfoww.
 
 ---
 
+## Interação 18 — Tempo de viagem da CME
+
+**Data:** 12-11-2026
+**Objetivo:** Adicionar mais dados ao painel.
+
+**Prompt enviado à IA:**
+
+```
+ok está legal, mas vamos adicionar mais dados
+```
+
+**Resumo da resposta:** A IA ofereceu quatro opções (tempo de viagem da CME, previsão × realidade do modelo ENLIL, vento solar no choque via OMNI, posições de todas as naves); o grupo escolheu o tempo de viagem. A IA adicionou 3 colunas (`cme_inicio`, `tempo_viagem_h`, `cme_velocidade_media`) e uma etapa no pipeline que calcula as horas do Sol até a nave e a velocidade média (distância do Horizons ÷ tempo), descartando vínculos com viagem fora de 12–168 h. No painel: novo gráfico "A CME freou ou acelerou?" (velocidade inicial × média, com a linha de mesma velocidade), indicador de viagem típica (mediana), coluna na tabela e uma etapa "viagem" na cadeia do evento.
+
+**O que funcionou:** Cálculo conferido à mão (0,99 UA em 76,8 h = 536 km/s) e painel testado com dados simulados.
+
+**O que precisou ajuste:** Retoques visuais após os testes (eixo com valor quebrado "2.308,7", números no formato brasileiro, tamanho dos indicadores).
+
+---
+
 <!-- Repita o bloco acima para cada interação com a IA -->
 
 &nbsp;

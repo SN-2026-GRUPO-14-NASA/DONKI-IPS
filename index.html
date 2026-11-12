@@ -157,12 +157,13 @@ main > *, .graficos > * { min-width: 0; }
 #contagem { margin-left: auto; font-size: 13px; color: var(--text-secondary); }
 #contagem strong { color: var(--text-primary); font-family: var(--mono); }
 
-#kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+#kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 16px; }
 .kpi .rot { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
-.kpi .num { font-family: var(--mono); font-size: 30px; font-weight: 600; line-height: 1.2; margin: 4px 0; }
+.kpi .num { font-family: var(--mono); font-size: 26px; white-space: nowrap; font-weight: 600; line-height: 1.2; margin: 4px 0; }
 .kpi .det { font-size: 12px; color: var(--text-secondary); }
 
-.graficos { display: grid; grid-template-columns: 3fr 2fr; gap: 24px; }
+.graficos { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.graficos .largo { grid-column: 1 / -1; }
 .grafico-box { position: relative; height: 300px; }
 .vazio[hidden] { display: none; }
 .vazio { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px; }
@@ -272,7 +273,7 @@ footer a { color: var(--text-secondary); }
   <section id="kpis"></section>
 
   <section class="graficos">
-    <div class="cartao">
+    <div class="cartao largo">
       <h2 id="titulo-barras">Choques por ano</h2>
       <p class="sub">Empilhado por local de detecção — os picos acompanham o ciclo solar de ~11 anos.</p>
       <div class="grafico-box"><canvas id="g-barras"></canvas><div class="vazio" id="v-barras" hidden></div></div>
@@ -282,6 +283,11 @@ footer a { color: var(--text-secondary); }
       <p class="sub">Cada ponto é um choque com CME e tempestade ligadas (DONKI/CME + DONKI/GST).</p>
       <div class="grafico-box"><canvas id="g-disp"></canvas><div class="vazio" id="v-disp" hidden></div></div>
     </div>
+    <div class="cartao">
+      <h2>A CME freou ou acelerou?</h2>
+      <p class="sub">Velocidade inicial (perto do Sol) × velocidade média até a nave. Abaixo da linha tracejada, a CME perdeu velocidade ao atravessar o vento solar.</p>
+      <div class="grafico-box"><canvas id="g-viagem"></canvas><div class="vazio" id="v-viagem" hidden></div></div>
+    </div>
   </section>
 
   <section class="cartao">
@@ -290,7 +296,7 @@ footer a { color: var(--text-secondary); }
     <div class="tabela-wrap">
       <table>
         <thead><tr>
-          <th>Data (UTC)</th><th>Local</th><th>CME</th><th>Kp</th><th>Eventos ligados</th><th>Instrumentos</th><th>Fonte</th>
+          <th>Data (UTC)</th><th>Local</th><th>CME</th><th>Viagem</th><th>Kp</th><th>Eventos ligados</th><th>Instrumentos</th><th>Fonte</th>
         </tr></thead>
         <tbody id="corpo"></tbody>
       </table>
@@ -661,7 +667,16 @@ function mostrarDetalhe(ev) {
     elos.push(`<div class="elo"><div class="trilho"><span class="bola" style="border-color:var(--sun)"></span><span class="linha"></span></div>
       <div class="txt"><b>Ejeção de massa coronal</b>
       <span class="valor">${escapeHtml(fmtNum(ev.cme_velocidade))} km/s</span>
-      <div>${escapeHtml(fmtDataHora(dataDoId(ev.cme_id) || ev._data))} UTC · tipo ${escapeHtml(ev.cme_tipo || "—")} · abertura ${escapeHtml(fmtNum((ev.cme_meia_largura ?? 0) * 2))}°</div></div></div>`);
+      <div>${escapeHtml(fmtDataHora(ev.cme_inicio ? new Date(ev.cme_inicio) : (dataDoId(ev.cme_id) || ev._data)))} UTC · tipo ${escapeHtml(ev.cme_tipo || "—")} · abertura ${escapeHtml(fmtNum((ev.cme_meia_largura ?? 0) * 2))}°</div></div></div>`);
+    if (ev.tempo_viagem_h != null) {
+      const vm = ev.cme_velocidade_media;
+      const variacao = vm != null && ev.cme_velocidade ? (vm / ev.cme_velocidade - 1) * 100 : null;
+      const frase = variacao == null ? "" : variacao < 0 ? `freou ${fmtNum(-variacao)}% no caminho` : `acelerou ${fmtNum(variacao)}% no caminho`;
+      elos.push(`<div class="elo"><div class="trilho"><span class="bola" style="border-style:dashed"></span><span class="linha"></span></div>
+        <div class="txt"><b>Viagem pelo meio interplanetário</b>
+        <span class="valor">${escapeHtml(fmtNum(ev.tempo_viagem_h))} h</span>
+        <div>${vm != null ? `média de ${escapeHtml(fmtNum(vm))} km/s · ${escapeHtml(frase)}` : "distância desconhecida"}</div></div></div>`);
+    }
   }
   elos.push(`<div class="elo"><div class="trilho"><span class="bola" style="border-color:${loc.cor}"></span><span class="linha"></span></div>
     <div class="txt"><b>Choque interplanetário</b>
@@ -764,7 +779,7 @@ function aplicarFiltros() {
   estado.limiteTabela = 50;
   document.getElementById("contagem").innerHTML =
     `<strong>${escapeHtml(fmtNum(estado.filtrados.length))}</strong> de ${escapeHtml(fmtNum(estado.todos.length))} choques`;
-  reconstruirPontos(); desenharKpis(); desenharGraficos(); desenharTabela();
+  reconstruirPontos(); desenharKpis(); desenharGraficos(); desenharGraficoViagem(); desenharTabela();
 }
 for (const el of [fLocal, fAno, fKp]) el.addEventListener("change", aplicarFiltros);
 let tBusca; fBusca.addEventListener("input", () => { clearTimeout(tBusca); tBusca = setTimeout(aplicarFiltros, 200); });
@@ -781,21 +796,25 @@ function desenharKpis() {
   const vels = evs.filter((e) => e.cme_velocidade != null);
   const maisRapida = vels.reduce((m, e) => (!m || e.cme_velocidade > m.cme_velocidade ? e : m), null);
   const pct = (x) => n ? fmtNum((100 * x) / n) + "%" : "—";
+  const viagens = evs.map((e) => e.tempo_viagem_h).filter((v) => v != null).sort((a, b) => a - b);
+  const medViagem = viagens.length ? (viagens.length % 2 ? viagens[(viagens.length - 1) / 2] : (viagens[viagens.length / 2 - 1] + viagens[viagens.length / 2]) / 2) : null;
   const kpi = (rot, num, det) => `<div class="cartao kpi"><div class="rot">${escapeHtml(rot)}</div><div class="num">${escapeHtml(num)}</div><div class="det">${det}</div></div>`;
   document.getElementById("kpis").innerHTML =
     kpi("Choques", fmtNum(n), n ? `de ${escapeHtml(fmtData(evs[evs.length - 1]._data))} a ${escapeHtml(fmtData(evs[0]._data))}` : "nenhum no filtro") +
     kpi("Causados por CME", pct(comCme), `${escapeHtml(fmtNum(comCme))} choques ligados a uma ejeção de massa coronal`) +
     kpi("Geraram tempestade", pct(comGst), `${escapeHtml(fmtNum(comGst))} ligados a uma tempestade geomagnética`) +
     kpi("Maior Kp", maiorKp ? fmtNum(maiorKp.kp_max, 2) : "—", maiorKp ? `${escapeHtml(escalaG(maiorKp.kp_max))} · ${escapeHtml(fmtData(maiorKp._data))}` : "sem dados de tempestade") +
+    kpi("Viagem típica da CME", medViagem != null ? fmtNum(medViagem) + " h" : "—", medViagem != null ? `mediana de ${escapeHtml(fmtNum(viagens.length))} CMEs · ${escapeHtml(fmtNum(medViagem / 24, 1))} dias` : "sem dados de viagem") +
     kpi("CME mais rápida", maisRapida ? fmtNum(maisRapida.cme_velocidade) + " km/s" : "—", maisRapida ? escapeHtml(fmtData(maisRapida._data)) : "sem dados de CME");
 }
 
 // ---------- Gráficos (Chart.js) ----------
 Chart.defaults.color = "#a3acc0";
+Chart.defaults.locale = "pt-BR";
 Chart.defaults.font.family = "Sora, system-ui, sans-serif";
 Chart.defaults.borderColor = "#1f2a40";
 const tooltipBase = { backgroundColor: "#131a2b", borderColor: "#1f2a40", borderWidth: 1, titleColor: "#eef1f7", bodyColor: "#a3acc0", padding: 10 };
-let gBarras = null, gDisp = null;
+let gBarras = null, gDisp = null, gViagem = null;
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
 function desenharGraficos() {
@@ -861,6 +880,37 @@ function desenharGraficos() {
   });
 }
 
+function desenharGraficoViagem() {
+  const pts = estado.filtrados.filter((e) => e.cme_velocidade != null && e.cme_velocidade_media != null)
+    .map((e) => ({ x: e.cme_velocidade, y: e.cme_velocidade_media, ev: e }));
+  const v = document.getElementById("v-viagem");
+  v.hidden = pts.length > 0;
+  v.textContent = "Ainda não há choques com tempo de viagem — rode o pipeline com o enriquecimento.";
+  const lim = Math.ceil(Math.max(1000, ...pts.map((p) => Math.max(p.x, p.y))) * 1.02 / 500) * 500;
+  if (gViagem) gViagem.destroy();
+  gViagem = new Chart(document.getElementById("g-viagem"), {
+    data: { datasets: [
+      { type: "scatter", label: "Choques", data: pts, backgroundColor: "rgba(57,135,229,.8)", borderColor: "#0d1220", borderWidth: 2, pointRadius: 5, pointHoverRadius: 8, pointHitRadius: 8 },
+      { type: "line", label: "Mesma velocidade", data: [{ x: 0, y: 0 }, { x: lim, y: lim }], borderColor: "#6f7891", borderDash: [6, 5], borderWidth: 1.5, pointRadius: 0 },
+    ] },
+    options: {
+      maintainAspectRatio: false, animation: { duration: 300 },
+      scales: {
+        x: { type: "linear", min: 0, max: lim, title: { display: true, text: "velocidade inicial (km/s)" }, grid: { color: "#161f33" } },
+        y: { min: 0, max: lim, title: { display: true, text: "velocidade média até a nave (km/s)" }, grid: { color: "#161f33" } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { ...tooltipBase, filter: (c) => c.datasetIndex === 0, callbacks: {
+          title: (c) => fmtDataHora(c[0].raw.ev._data) + " UTC",
+          label: (c) => `inicial ${fmtNum(c.raw.x)} km/s → média ${fmtNum(c.raw.y)} km/s · ${fmtNum(c.raw.ev.tempo_viagem_h)} h`,
+        } },
+      },
+      onClick: (_, els) => { const el = els.find((e) => e.datasetIndex === 0); if (el) { selecionar(pts[el.index].ev); cenaEl.scrollIntoView({ behavior: "smooth" }); } },
+    },
+  });
+}
+
 // ---------- Tabela ----------
 const corpo = document.getElementById("corpo"), btnMais = document.getElementById("mais");
 function desenharTabela() {
@@ -872,12 +922,13 @@ function desenharTabela() {
       <td class="mono">${escapeHtml(fmtDataHora(ev._data))}</td>
       <td><span class="local"><span class="sw${forma}" style="background:${loc.cor}"></span>${escapeHtml(loc.nome)}</span></td>
       <td class="mono">${ev.cme_velocidade != null ? escapeHtml(fmtNum(ev.cme_velocidade)) + " km/s" : "—"}</td>
+      <td class="mono">${ev.tempo_viagem_h != null ? escapeHtml(fmtNum(ev.tempo_viagem_h)) + " h" : "—"}</td>
       <td class="kp">${ev.kp_max != null ? `${escapeHtml(fmtNum(ev.kp_max, 1))} <small>${escapeHtml(escalaG(ev.kp_max))}</small>` : "—"}</td>
       <td>${(ev.linked_events || []).map((id) => `<span class="chip ${escapeHtml(tipoEvento(id))}" title="${escapeHtml(id)}">${escapeHtml(tipoEvento(id))}</span>`).join("") || "—"}</td>
       <td>${(ev.instruments || []).map(escapeHtml).join(", ") || "—"}</td>
       <td>${link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener">DONKI ↗</a>` : "—"}</td>
     </tr>`;
-  }).join("") || `<tr><td colspan="7" style="color:var(--text-muted)">Nenhum choque com os filtros atuais.</td></tr>`;
+  }).join("") || `<tr><td colspan="8" style="color:var(--text-muted)">Nenhum choque com os filtros atuais.</td></tr>`;
   btnMais.hidden = estado.filtrados.length <= estado.limiteTabela;
 }
 corpo.addEventListener("click", (e) => {
