@@ -433,6 +433,25 @@ vamos fazer tudo
 
 ---
 
+## Interação 22 — Nova paleta, nome e logo (CoronaFlux)
+
+**Data:** 12-11-2026
+**Objetivo:** Mudar a paleta da interface para dourado, laranja, amarelo e azul e criar uma logo com um nome ligado à coroa solar e a campos eletromagnéticos.
+
+**Prompt enviado à IA:**
+
+```
+vamos repensar a paleta de cores, queria algo dourado, laranja, amarelo, e azul para a interface. Outra coisa queria adicionar uma logo com um nome novo algo referente a coronária e a campos eletromagneticos
+```
+
+**Resumo da resposta:** A IA apontou que o termo solar é "coronal" (coroa do Sol), não "coronária" (artéria do coração), e propôs o nome **CoronaFlux** (corona + fluxo magnético). Desenhou a logo em SVG: o Sol com a coroa e laços de linhas de campo magnético de dipolo em dourado e azul. Trocou a interface para fundo azul-marinho com acentos dourado/laranja/amarelo/azul. Para os dados, validou as cores com um verificador de daltonismo: Terra azul, STEREO A laranja, STEREO B dourado e MESSENGER cinza com forma de losango. O nome do repositório continua DONKI-IPS, como exige o enunciado.
+
+**O que funcionou:** Paleta e logo aplicadas; testes visuais no computador e no celular.
+
+**O que precisou ajuste:** O amarelo puro ficou claro demais em relação às outras cores dos dados; a IA usou um dourado mais escuro para a STEREO B. A primeira versão da logo parecia um laço de fita; a IA redesenhou os laços para parecerem linhas de campo de um dipolo. No celular, o detalhe do choque cobria a legenda; a legenda passou a se esconder quando o detalhe está aberto.
+
+---
+
 <!-- Repita o bloco acima para cada interação com a IA -->
 
 &nbsp;

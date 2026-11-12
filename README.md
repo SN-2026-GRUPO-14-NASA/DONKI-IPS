@@ -1,4 +1,8 @@
-# DONKI-IPS — Pipeline de Dados de Choques Interplanetários (NASA)
+<img src="assets/logo.svg" width="72" alt="Logo CoronaFlux">
+
+# CoronaFlux — DONKI-IPS
+
+**Pipeline de dados de choques interplanetários (NASA)**
 
 **Organização:** [SN-2026-GRUPO-14-NASA](https://github.com/SN-2026-GRUPO-14-NASA)
 **Repositório:** [DONKI-IPS](https://github.com/SN-2026-GRUPO-14-NASA/DONKI-IPS)

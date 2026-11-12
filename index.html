@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DONKI-IPS · Choques Interplanetários</title>
+<title>CoronaFlux · Choques Interplanetários (DONKI-IPS)</title>
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <meta name="description" content="Painel 3D dos choques interplanetários registrados pela NASA (DONKI/IPS), com dados de CMEs, tempestades geomagnéticas e posições do JPL Horizons.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,18 +19,22 @@
 <style>
 :root {
   color-scheme: dark;
-  --bg:        #05070d;
-  --surface-1: #0d1220;
-  --surface-2: #131a2b;
-  --border:    #1f2a40;
-  --text-primary:   #eef1f7;
-  --text-secondary: #a3acc0;
-  --text-muted:     #6f7891;
+  --bg:        #050a18;
+  --surface-1: #0b1226;
+  --surface-2: #111b36;
+  --border:    #1f2c4f;
+  --text-primary:   #f3efe4;
+  --text-secondary: #b4bacb;
+  --text-muted:     #78829e;
   --sun:       #ffb347;
+  --gold:      #e0b44a;
+  --orange:    #f08a24;
+  --yellow:    #ffd84d;
+  --blue:      #4d9bff;
   /* Locais de detecção — validados (dark, all-pairs, 3 slots) + MESSENGER neutro com forma própria */
   --loc-earth:  #3987e5;
-  --loc-sta:    #d95926;
-  --loc-stb:    #199e70;
+  --loc-sta:    #e2552a;
+  --loc-stb:    #c9a227;
   --loc-mes:    #c3c2b7;
   /* Status (reservados) */
   --good:     #0ca30c;
@@ -41,18 +46,26 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--text-primary); }
 body { font-family: "Sora", system-ui, sans-serif; font-size: 15px; line-height: 1.5; }
-a { color: var(--loc-earth); }
+a { color: var(--blue); }
 button, select, input { font: inherit; color: inherit; }
 
 /* ---------- Cabeçalho ---------- */
+header.topo::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--orange) 45%, var(--blue) 75%, transparent);
+  opacity: .7;
+}
 header.topo {
   display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-  padding: 14px 24px; border-bottom: 1px solid var(--border); background: rgba(5,7,13,.9);
+  padding: 14px 24px; border-bottom: 1px solid var(--border); background: rgba(5,10,24,.9);
   position: sticky; top: 0; z-index: 20; backdrop-filter: blur(8px);
 }
-.marca { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.marca h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: .04em; }
-.marca h1 span { color: var(--sun); }
+.marca { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.marca img { width: 40px; height: 40px; flex: none; }
+.marca h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .01em; line-height: 1; }
+.marca h1 .corona { background: linear-gradient(90deg, var(--yellow), var(--orange)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.marca h1 .flux { color: var(--blue); }
+.marca .projeto { font-family: var(--mono); font-size: 11px; color: var(--gold); border: 1px solid #4a3a16; border-radius: 4px; padding: 1px 6px; }
 .marca p { margin: 0; color: var(--text-secondary); font-size: 13px; }
 .status {
   display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary);
@@ -64,23 +77,23 @@ header.topo {
 /* ---------- Cena 3D ---------- */
 #cena {
   position: relative; height: min(78vh, 760px); min-height: 460px; overflow: hidden;
-  background: radial-gradient(ellipse at 50% 45%, #0c1426 0%, var(--bg) 70%);
+  background: radial-gradient(ellipse at 50% 45%, #0d1a3a 0%, var(--bg) 70%);
   border-bottom: 1px solid var(--border);
 }
 #cena canvas { display: block; }
 #rotulos { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
 .rotulo {
   font-size: 11px; font-family: var(--mono); color: var(--text-secondary);
-  padding: 1px 6px; border-radius: 4px; background: rgba(5,7,13,.6); white-space: nowrap;
+  padding: 1px 6px; border-radius: 4px; background: rgba(5,10,24,.6); white-space: nowrap;
   transform: translateY(-14px);
 }
 .rotulo.nave { color: var(--text-primary); }
 .sobre {
-  position: absolute; z-index: 3; background: rgba(13,18,32,.88); border: 1px solid var(--border);
+  position: absolute; z-index: 3; background: rgba(11,18,38,.88); border: 1px solid var(--border);
   border-radius: var(--radius); backdrop-filter: blur(6px);
 }
 #intro { top: 16px; left: 16px; max-width: 360px; padding: 14px 16px; }
-#intro h2 { margin: 0 0 4px; font-size: 16px; }
+#intro h2 { margin: 0 0 4px; font-size: 16px; color: var(--yellow); }
 #intro p { margin: 0 0 10px; color: var(--text-secondary); font-size: 13px; }
 .legenda { display: grid; gap: 4px; font-size: 12px; color: var(--text-secondary); }
 .legenda div { display: flex; align-items: center; gap: 8px; }
@@ -96,8 +109,8 @@ header.topo {
   width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
   background: var(--surface-2); cursor: pointer; font-size: 14px; flex: none;
 }
-#linha-tempo button:hover { border-color: var(--sun); }
-#tempo { flex: 1; min-width: 160px; accent-color: var(--sun); }
+#linha-tempo button:hover { border-color: var(--gold); color: var(--yellow); }
+#tempo { flex: 1; min-width: 160px; accent-color: var(--gold); }
 #data-atual { font-family: var(--mono); font-size: 14px; min-width: 96px; }
 #linha-tempo label { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
 #linha-tempo select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; }
@@ -142,7 +155,8 @@ header.topo {
 main { max-width: 1240px; margin: 0 auto; padding: 24px; display: grid; gap: 24px; }
 main > *, .graficos > * { min-width: 0; }
 .cartao { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
-.cartao h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+.cartao h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.cartao h2::before { content: ""; width: 4px; height: 14px; border-radius: 2px; background: linear-gradient(var(--yellow), var(--orange)); }
 .cartao .sub { margin: 0 0 14px; font-size: 12px; color: var(--text-muted); }
 
 #filtros { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
@@ -152,7 +166,7 @@ main > *, .graficos > * { min-width: 0; }
   padding: 8px 10px; min-width: 150px;
 }
 #filtros input { min-width: 220px; }
-#filtros select:focus, #filtros input:focus { outline: 2px solid var(--loc-earth); outline-offset: 1px; }
+#filtros select:focus, #filtros input:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
 .btn-sec { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; cursor: pointer; color: var(--text-secondary); }
 .btn-sec:hover { border-color: var(--text-muted); color: var(--text-primary); }
 .btn-acao { margin-top: 10px; width: 100%; background: var(--surface-2); border: 1px solid #5a4220; color: var(--sun); border-radius: 8px; padding: 7px 10px; cursor: pointer; font-size: 13px; }
@@ -170,7 +184,7 @@ main > *, .graficos > * { min-width: 0; }
 #contagem strong { color: var(--text-primary); font-family: var(--mono); }
 
 #kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 16px; }
-.kpi .rot { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.kpi .rot { font-size: 12px; color: var(--gold); text-transform: uppercase; letter-spacing: .06em; }
 .kpi .num { font-family: var(--mono); font-size: 26px; white-space: nowrap; font-weight: 600; line-height: 1.2; margin: 4px 0; }
 .kpi .det { font-size: 12px; color: var(--text-secondary); }
 
@@ -190,7 +204,7 @@ td.mono { font-family: var(--mono); white-space: nowrap; }
 .local { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .chip { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 1px 6px; margin: 1px 2px 1px 0; border-radius: 4px; border: 1px solid var(--border); color: var(--text-secondary); }
 .chip.CME { color: var(--sun); border-color: #5a4220; }
-.chip.GST { color: #f0a0a0; border-color: #5a2a2a; }
+.chip.GST { color: #8fbcff; border-color: #24407a; }
 .kp { font-family: var(--mono); }
 .kp small { color: var(--text-muted); }
 #mais { margin: 14px auto 0; display: block; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; cursor: pointer; }
@@ -204,7 +218,8 @@ footer a { color: var(--text-secondary); }
   header.topo { position: static; padding: 12px 16px; }
   #intro { max-width: calc(100% - 32px); }
   #intro p { display: none; }
-  #detalhe { top: auto; bottom: 132px; left: 12px; right: 12px; width: auto; max-height: 46%; }
+  #detalhe { top: 12px; bottom: auto; left: 12px; right: 12px; width: auto; max-height: calc(100% - 175px); }
+  #cena:has(#detalhe.aberto) #intro { display: none; }
   #intro, #linha-tempo { left: 12px; right: 12px; }
   #intro { top: 12px; padding: 10px 12px; }
   #intro h2 { font-size: 14px; }
@@ -219,8 +234,10 @@ footer a { color: var(--text-secondary); }
 
 <header class="topo">
   <div class="marca">
-    <h1>DONKI<span>·</span>IPS</h1>
+    <img src="assets/logo.svg" alt="" width="40" height="40">
+    <h1><span class="corona">Corona</span><span class="flux">Flux</span></h1>
     <p>Choques interplanetários registrados pela NASA</p>
+    <span class="projeto">DONKI·IPS</span>
   </div>
   <div class="status" id="status" title="Última execução do pipeline (tabela execucoes)">
     <span class="ponto"></span><span>Carregando…</span>
@@ -335,7 +352,7 @@ footer a { color: var(--text-secondary); }
   <a href="https://ssd.jpl.nasa.gov/horizons/" target="_blank" rel="noopener">JPL Horizons</a> ·
   Pipeline: GitHub Actions → Supabase → GitHub Pages ·
   <a href="https://github.com/SN-2026-GRUPO-14-NASA/DONKI-IPS" target="_blank" rel="noopener">Repositório</a> ·
-  SN-2026-GRUPO-14-NASA
+  CoronaFlux — projeto DONKI-IPS do SN-2026-GRUPO-14-NASA
 </footer>
 
 <script type="module">
@@ -352,8 +369,8 @@ const SUPABASE_KEY = "sb_publishable_MyoQwzy2BsCYKVIVGTgrQg_z_K7Iay5";
 
 const LOCAIS = {
   "Earth":     { nome: "Terra (L1)", cor: "#3987e5", forma: "esfera" },
-  "STEREO A":  { nome: "STEREO A",   cor: "#d95926", forma: "esfera" },
-  "STEREO B":  { nome: "STEREO B",   cor: "#199e70", forma: "esfera" },
+  "STEREO A":  { nome: "STEREO A",   cor: "#e2552a", forma: "esfera" },
+  "STEREO B":  { nome: "STEREO B",   cor: "#c9a227", forma: "esfera" },
   "MESSENGER": { nome: "MESSENGER",  cor: "#c3c2b7", forma: "losango" },
 };
 const COR_OUTRO = "#8a8f9c";
@@ -534,7 +551,7 @@ for (const nome of Object.keys(ELEMENTOS)) {
 }
 // Naves STEREO (posição aproximada na data da linha do tempo)
 const naves = {};
-for (const [q, cor] of [["A", 0xd95926], ["B", 0x199e70]]) {
+for (const [q, cor] of [["A", 0xe2552a], ["B", 0xc9a227]]) {
   const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.09), new THREE.MeshBasicMaterial({ color: cor, wireframe: true }));
   m.add(rotulo("STEREO " + q, "nave")); cena.add(m); naves[q] = m;
 }
@@ -544,7 +561,7 @@ const geoEsfera = new THREE.SphereGeometry(1, 12, 8);
 const geoLosango = new THREE.OctahedronGeometry(1.25);
 const matPontos = new THREE.MeshBasicMaterial({ color: 0xffffff });
 let grupos = [];   // [{ malha, eventos }]
-const aux = new THREE.Object3D(), corAux = new THREE.Color(), corFundo = new THREE.Color("#05070d");
+const aux = new THREE.Object3D(), corAux = new THREE.Color(), corFundo = new THREE.Color("#050a18");
 
 function tamanhoPonto(ev) { return ev.kp_max != null ? 0.07 + ev.kp_max * 0.012 : 0.07; }
 
@@ -763,7 +780,7 @@ function mostrarDetalhe(ev) {
     <span class="valor">${escapeHtml(loc.nome)}</span>
     <div>${escapeHtml(fmtDataHora(ev._data))} UTC · ${escapeHtml(fmtNum(distSol, 2))} UA do Sol</div></div></div>`);
   if (ev.kp_max != null) {
-    elos.push(`<div class="elo"><div class="trilho"><span class="bola" style="border-color:#f0a0a0"></span><span class="linha"></span></div>
+    elos.push(`<div class="elo"><div class="trilho"><span class="bola" style="border-color:var(--blue)"></span><span class="linha"></span></div>
       <div class="txt"><b>Tempestade geomagnética</b>
       <span class="valor">Kp ${escapeHtml(fmtNum(ev.kp_max, 2))}</span>
       <div>Escala NOAA: ${escapeHtml(escalaG(ev.kp_max))}</div></div></div>`);
@@ -908,11 +925,11 @@ function desenharKpis() {
 }
 
 // ---------- Gráficos (Chart.js) ----------
-Chart.defaults.color = "#a3acc0";
+Chart.defaults.color = "#b4bacb";
 Chart.defaults.locale = "pt-BR";
 Chart.defaults.font.family = "Sora, system-ui, sans-serif";
-Chart.defaults.borderColor = "#1f2a40";
-const tooltipBase = { backgroundColor: "#131a2b", borderColor: "#1f2a40", borderWidth: 1, titleColor: "#eef1f7", bodyColor: "#a3acc0", padding: 10 };
+Chart.defaults.borderColor = "#1f2c4f";
+const tooltipBase = { backgroundColor: "#111b36", borderColor: "#1f2c4f", borderWidth: 1, titleColor: "#f3efe4", bodyColor: "#b4bacb", padding: 10 };
 let gBarras = null, gDisp = null, gViagem = null;
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
@@ -933,7 +950,7 @@ function desenharGraficos() {
     label: l === "_outro" ? "Outro" : LOCAIS[l].nome,
     data: rotulos.map((r) => evs.filter((e) => (l === "_outro" ? !LOCAIS[e.location] : e.location === l) && chave(e) === r).length),
     backgroundColor: l === "_outro" ? COR_OUTRO : LOCAIS[l].cor,
-    borderColor: "#0d1220", borderWidth: { top: 2 }, borderRadius: 3, borderSkipped: "bottom",
+    borderColor: "#0b1226", borderWidth: { top: 2 }, borderRadius: 3, borderSkipped: "bottom",
     maxBarThickness: 34,
   }));
   document.getElementById("v-barras").hidden = evs.length > 0;
@@ -946,7 +963,7 @@ function desenharGraficos() {
       interaction: { mode: "index", intersect: false },
       scales: {
         x: { stacked: true, grid: { display: false } },
-        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: "#161f33" }, title: { display: true, text: "choques" } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: "#17223f" }, title: { display: true, text: "choques" } },
       },
       plugins: { legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, useBorderRadius: true, borderRadius: 2 } }, tooltip: tooltipBase },
     },
@@ -960,12 +977,12 @@ function desenharGraficos() {
   if (gDisp) gDisp.destroy();
   gDisp = new Chart(document.getElementById("g-disp"), {
     type: "scatter",
-    data: { datasets: [{ label: "Choques", data: pontos, backgroundColor: "rgba(255,179,71,.75)", borderColor: "#0d1220", borderWidth: 2, pointRadius: 5, pointHoverRadius: 8, pointHitRadius: 8 }] },
+    data: { datasets: [{ label: "Choques", data: pontos, backgroundColor: "rgba(240,138,36,.85)", borderColor: "#0b1226", borderWidth: 2, pointRadius: 5, pointHoverRadius: 8, pointHitRadius: 8 }] },
     options: {
       maintainAspectRatio: false, animation: { duration: 300 },
       scales: {
-        x: { title: { display: true, text: "velocidade da CME (km/s)" }, grid: { color: "#161f33" } },
-        y: { min: 0, max: 9, title: { display: true, text: "Kp máximo" }, ticks: { stepSize: 1 }, grid: { color: "#161f33" } },
+        x: { title: { display: true, text: "velocidade da CME (km/s)" }, grid: { color: "#17223f" } },
+        y: { min: 0, max: 9, title: { display: true, text: "Kp máximo" }, ticks: { stepSize: 1 }, grid: { color: "#17223f" } },
       },
       plugins: {
         legend: { display: false },
@@ -989,14 +1006,14 @@ function desenharGraficoViagem() {
   if (gViagem) gViagem.destroy();
   gViagem = new Chart(document.getElementById("g-viagem"), {
     data: { datasets: [
-      { type: "scatter", label: "Choques", data: pts, backgroundColor: "rgba(57,135,229,.8)", borderColor: "#0d1220", borderWidth: 2, pointRadius: 5, pointHoverRadius: 8, pointHitRadius: 8 },
-      { type: "line", label: "Mesma velocidade", data: [{ x: 0, y: 0 }, { x: lim, y: lim }], borderColor: "#6f7891", borderDash: [6, 5], borderWidth: 1.5, pointRadius: 0 },
+      { type: "scatter", label: "Choques", data: pts, backgroundColor: "rgba(77,155,255,.85)", borderColor: "#0b1226", borderWidth: 2, pointRadius: 5, pointHoverRadius: 8, pointHitRadius: 8 },
+      { type: "line", label: "Mesma velocidade", data: [{ x: 0, y: 0 }, { x: lim, y: lim }], borderColor: "#78829e", borderDash: [6, 5], borderWidth: 1.5, pointRadius: 0 },
     ] },
     options: {
       maintainAspectRatio: false, animation: { duration: 300 },
       scales: {
-        x: { type: "linear", min: 0, max: lim, title: { display: true, text: "velocidade inicial (km/s)" }, grid: { color: "#161f33" } },
-        y: { min: 0, max: lim, title: { display: true, text: "velocidade média até a nave (km/s)" }, grid: { color: "#161f33" } },
+        x: { type: "linear", min: 0, max: lim, title: { display: true, text: "velocidade inicial (km/s)" }, grid: { color: "#17223f" } },
+        y: { min: 0, max: lim, title: { display: true, text: "velocidade média até a nave (km/s)" }, grid: { color: "#17223f" } },
       },
       plugins: {
         legend: { display: false },
