@@ -319,6 +319,44 @@ ok vamos implementar o JPL Horizons, e o DONKI/CME e o DONKI/GST
 
 ---
 
+## Interação 16 — Ideia do front-end 3D
+
+**Data:** 12-11-2026
+**Objetivo:** Discutir um painel 3D no estilo de um projeto anterior do usuário.
+
+**Prompt enviado à IA:**
+
+```
+ok vamos pensar no front, queria algo que nem o apoastro que fizemos o que acha, so que 3d
+```
+
+**Resumo da resposta:** A IA propôs uma cena 3D (Three.js) com o Sol, as órbitas e os choques nas posições reais das naves, uma linha do tempo animada de 2010 a 2026, um painel lateral com a cadeia CME → choque → tempestade e, abaixo, as seções obrigatórias (status, filtros, gráficos e tabela).
+
+**O que funcionou:** A estrutura proposta foi adotada.
+
+**O que precisou ajuste:** A IA não encontrou a pasta do projeto anterior no computador; o grupo decidiu não usá-lo como referência.
+
+---
+
+## Interação 17 — Construção do painel (index.html)
+
+**Data:** 12-11-2026
+**Objetivo:** Implementar o painel com a URL e a publishable key do Supabase.
+
+**Prompt enviado à IA:**
+
+```
+esquece o apoastro vamos pensar independentemente, https://xxbwvcqpdvdrqmwyfoww.supabase.co [publishable key], quer que eu pegue com um select no banco?
+```
+
+**Resumo da resposta:** A IA leu o banco pela API REST e descobriu que só havia 18 eventos (a carga histórica não tinha rodado) e que as colunas de enriquecimento estavam vazias. Depois construiu o index.html: cena 3D com Three.js, linha do tempo, painel de detalhe com cone da CME, filtros que valem para todo o painel, indicadores, gráfico de choques por ano (ciclo solar), dispersão velocidade da CME × Kp e tabela. Usou `escapeHtml()` em todo valor externo, aceita só links `https://` e pagina as consultas (limite de 1000 linhas do Supabase). As cores foram validadas para daltonismo; a MESSENGER usa forma diferente (losango) como segunda codificação.
+
+**O que funcionou:** Testado num navegador automatizado com 1.642 eventos simulados: paginação, filtros, seleção, linha do tempo e bloqueio de XSS funcionando.
+
+**O que precisou ajuste:** Nos testes, a IA encontrou e corrigiu: mensagens de "sem dados" aparecendo sobre os gráficos (conflito do atributo `hidden` com CSS), cone da CME opaco demais, rolagem horizontal no celular e rótulos dos planetas sobrepondo o painel de detalhe.
+
+---
+
 <!-- Repita o bloco acima para cada interação com a IA -->
 
 &nbsp;

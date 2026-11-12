@@ -1,12 +1,947 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DONKI-IPS — Choques Interplanetários</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DONKI-IPS · Choques Interplanetários</title>
+<meta name="description" content="Painel 3D dos choques interplanetários registrados pela NASA (DONKI/IPS), com dados de CMEs, tempestades geomagnéticas e posições do JPL Horizons.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<style>
+:root {
+  color-scheme: dark;
+  --bg:        #05070d;
+  --surface-1: #0d1220;
+  --surface-2: #131a2b;
+  --border:    #1f2a40;
+  --text-primary:   #eef1f7;
+  --text-secondary: #a3acc0;
+  --text-muted:     #6f7891;
+  --sun:       #ffb347;
+  /* Locais de detecção — validados (dark, all-pairs, 3 slots) + MESSENGER neutro com forma própria */
+  --loc-earth:  #3987e5;
+  --loc-sta:    #d95926;
+  --loc-stb:    #199e70;
+  --loc-mes:    #c3c2b7;
+  /* Status (reservados) */
+  --good:     #0ca30c;
+  --warning:  #fab219;
+  --critical: #d03b3b;
+  --radius: 10px;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text-primary); }
+body { font-family: "Sora", system-ui, sans-serif; font-size: 15px; line-height: 1.5; }
+a { color: var(--loc-earth); }
+button, select, input { font: inherit; color: inherit; }
+
+/* ---------- Cabeçalho ---------- */
+header.topo {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 14px 24px; border-bottom: 1px solid var(--border); background: rgba(5,7,13,.9);
+  position: sticky; top: 0; z-index: 20; backdrop-filter: blur(8px);
+}
+.marca { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.marca h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: .04em; }
+.marca h1 span { color: var(--sun); }
+.marca p { margin: 0; color: var(--text-secondary); font-size: 13px; }
+.status {
+  display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary);
+  padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-1);
+}
+.status .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+.status strong { color: var(--text-primary); font-weight: 600; }
+
+/* ---------- Cena 3D ---------- */
+#cena {
+  position: relative; height: min(78vh, 760px); min-height: 460px; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 45%, #0c1426 0%, var(--bg) 70%);
+  border-bottom: 1px solid var(--border);
+}
+#cena canvas { display: block; }
+#rotulos { position: absolute; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.rotulo {
+  font-size: 11px; font-family: var(--mono); color: var(--text-secondary);
+  padding: 1px 6px; border-radius: 4px; background: rgba(5,7,13,.6); white-space: nowrap;
+  transform: translateY(-14px);
+}
+.rotulo.nave { color: var(--text-primary); }
+.sobre {
+  position: absolute; z-index: 3; background: rgba(13,18,32,.88); border: 1px solid var(--border);
+  border-radius: var(--radius); backdrop-filter: blur(6px);
+}
+#intro { top: 16px; left: 16px; max-width: 360px; padding: 14px 16px; }
+#intro h2 { margin: 0 0 4px; font-size: 16px; }
+#intro p { margin: 0 0 10px; color: var(--text-secondary); font-size: 13px; }
+.legenda { display: grid; gap: 4px; font-size: 12px; color: var(--text-secondary); }
+.legenda div { display: flex; align-items: center; gap: 8px; }
+.sw { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.sw.losango { border-radius: 1px; transform: rotate(45deg) scale(.85); }
+.legenda .nota { margin-top: 4px; color: var(--text-muted); font-size: 11px; }
+
+#linha-tempo {
+  left: 16px; right: 16px; bottom: 16px; padding: 10px 14px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+#linha-tempo button {
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--surface-2); cursor: pointer; font-size: 14px; flex: none;
+}
+#linha-tempo button:hover { border-color: var(--sun); }
+#tempo { flex: 1; min-width: 160px; accent-color: var(--sun); }
+#data-atual { font-family: var(--mono); font-size: 14px; min-width: 96px; }
+#linha-tempo label { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+#linha-tempo select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; }
+
+#detalhe {
+  top: 16px; right: 16px; width: 340px; max-height: calc(100% - 110px); overflow: auto;
+  padding: 16px; display: none;
+}
+#detalhe.aberto { display: block; }
+#detalhe h3 { margin: 0 0 2px; font-size: 15px; font-family: var(--mono); }
+#detalhe .sub { color: var(--text-secondary); font-size: 12px; margin-bottom: 12px; }
+#detalhe .fechar {
+  position: absolute; top: 8px; right: 10px; background: none; border: 0; cursor: pointer;
+  font-size: 20px; color: var(--text-muted);
+}
+.cadeia { display: grid; gap: 0; margin: 8px 0 12px; }
+.elo { display: grid; grid-template-columns: 22px 1fr; gap: 10px; }
+.elo .trilho { display: flex; flex-direction: column; align-items: center; }
+.elo .bola { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--text-muted); margin-top: 4px; }
+.elo .linha { flex: 1; width: 2px; background: var(--border); min-height: 14px; }
+.elo:last-child .linha { display: none; }
+.elo .txt { padding-bottom: 10px; font-size: 13px; }
+.elo .txt b { display: block; font-size: 12px; color: var(--text-muted); font-weight: 400; text-transform: uppercase; letter-spacing: .06em; }
+.elo .txt .valor { font-family: var(--mono); font-size: 15px; }
+.campos { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 12px; margin: 0; }
+.campos dt { color: var(--text-muted); }
+.campos dd { margin: 0; }
+.aviso-aprox { font-size: 11px; color: var(--warning); margin-top: 8px; }
+
+#dica {
+  position: absolute; pointer-events: none; display: none; z-index: 6;
+  padding: 6px 10px; font-size: 12px; border-radius: 6px;
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+#dica .mono { font-family: var(--mono); }
+#carregando {
+  position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-secondary);
+  font-size: 14px; pointer-events: none;
+}
+
+/* ---------- Conteúdo ---------- */
+main { max-width: 1240px; margin: 0 auto; padding: 24px; display: grid; gap: 24px; }
+main > *, .graficos > * { min-width: 0; }
+.cartao { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+.cartao h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+.cartao .sub { margin: 0 0 14px; font-size: 12px; color: var(--text-muted); }
+
+#filtros { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+#filtros label { display: grid; gap: 4px; font-size: 12px; color: var(--text-secondary); }
+#filtros select, #filtros input {
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; min-width: 150px;
+}
+#filtros input { min-width: 220px; }
+#filtros select:focus, #filtros input:focus { outline: 2px solid var(--loc-earth); outline-offset: 1px; }
+#limpar { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; cursor: pointer; color: var(--text-secondary); }
+#contagem { margin-left: auto; font-size: 13px; color: var(--text-secondary); }
+#contagem strong { color: var(--text-primary); font-family: var(--mono); }
+
+#kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+.kpi .rot { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+.kpi .num { font-family: var(--mono); font-size: 30px; font-weight: 600; line-height: 1.2; margin: 4px 0; }
+.kpi .det { font-size: 12px; color: var(--text-secondary); }
+
+.graficos { display: grid; grid-template-columns: 3fr 2fr; gap: 24px; }
+.grafico-box { position: relative; height: 300px; }
+.vazio[hidden] { display: none; }
+.vazio { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px; }
+
+.tabela-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-weight: 600; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--surface-2); }
+td.mono { font-family: var(--mono); white-space: nowrap; }
+.local { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.chip { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 1px 6px; margin: 1px 2px 1px 0; border-radius: 4px; border: 1px solid var(--border); color: var(--text-secondary); }
+.chip.CME { color: var(--sun); border-color: #5a4220; }
+.chip.GST { color: #f0a0a0; border-color: #5a2a2a; }
+.kp { font-family: var(--mono); }
+.kp small { color: var(--text-muted); }
+#mais { margin: 14px auto 0; display: block; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; cursor: pointer; }
+
+footer { max-width: 1240px; margin: 0 auto; padding: 8px 24px 40px; color: var(--text-muted); font-size: 12px; }
+footer a { color: var(--text-secondary); }
+.erro { color: #f0a0a0; }
+
+@media (max-width: 860px) {
+  .graficos { grid-template-columns: 1fr; }
+  header.topo { position: static; padding: 12px 16px; }
+  #intro { max-width: calc(100% - 32px); }
+  #intro p { display: none; }
+  #detalhe { top: auto; bottom: 132px; left: 12px; right: 12px; width: auto; max-height: 46%; }
+  #intro, #linha-tempo { left: 12px; right: 12px; }
+  #intro { top: 12px; padding: 10px 12px; }
+  #intro h2 { font-size: 14px; }
+  #filtros label, #filtros select, #filtros input { width: 100%; min-width: 0; }
+  #filtros label { flex: 1 1 100%; }
+  main { padding: 16px; }
+  #contagem { margin-left: 0; width: 100%; }
+}
+</style>
 </head>
 <body>
-  <h1>DONKI-IPS</h1>
-  <p>Painel de choques interplanetários (NASA DONKI) — em construção.</p>
+
+<header class="topo">
+  <div class="marca">
+    <h1>DONKI<span>·</span>IPS</h1>
+    <p>Choques interplanetários registrados pela NASA</p>
+  </div>
+  <div class="status" id="status" title="Última execução do pipeline (tabela execucoes)">
+    <span class="ponto"></span><span>Carregando…</span>
+  </div>
+</header>
+
+<section id="cena" aria-label="Mapa 3D do Sistema Solar interno com os choques interplanetários">
+  <div id="rotulos"></div>
+  <div id="carregando">Carregando dados…</div>
+
+  <div class="sobre" id="intro">
+    <h2>Onde os choques foram detectados</h2>
+    <p>Cada ponto é um choque no vento solar, na posição da nave que o detectou. Arraste para girar, role para aproximar e clique num ponto para ver a cadeia do evento.</p>
+    <div class="legenda" id="legenda"></div>
+  </div>
+
+  <div class="sobre" id="detalhe" aria-live="polite"></div>
+
+  <div class="sobre" id="linha-tempo">
+    <button id="play" aria-label="Reproduzir linha do tempo">▶</button>
+    <input type="range" id="tempo" min="0" max="1000" value="1000" aria-label="Data na linha do tempo">
+    <span id="data-atual">—</span>
+    <label>Velocidade
+      <select id="velocidade">
+        <option value="5">1 mês/s</option>
+        <option value="30" selected>6 meses/s</option>
+        <option value="73">1 ano/s</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="todos" checked> Mostrar todos</label>
+  </div>
+
+  <div id="dica"></div>
+</section>
+
+<main>
+  <section class="cartao" aria-label="Filtros">
+    <div id="filtros">
+      <label>Local de detecção
+        <select id="f-local"><option value="">Todos</option></select>
+      </label>
+      <label>Ano
+        <select id="f-ano"><option value="">Todos</option></select>
+      </label>
+      <label>Tempestade geomagnética
+        <select id="f-kp">
+          <option value="">Qualquer</option>
+          <option value="com">Gerou tempestade (qualquer Kp)</option>
+          <option value="5">Kp ≥ 5 (G1+)</option>
+          <option value="7">Kp ≥ 7 (G3+)</option>
+          <option value="8">Kp ≥ 8 (G4+)</option>
+        </select>
+      </label>
+      <label>Buscar
+        <input type="search" id="f-busca" placeholder="ID, instrumento, evento ligado…">
+      </label>
+      <button id="limpar" type="button">Limpar</button>
+      <div id="contagem"></div>
+    </div>
+  </section>
+
+  <section id="kpis"></section>
+
+  <section class="graficos">
+    <div class="cartao">
+      <h2 id="titulo-barras">Choques por ano</h2>
+      <p class="sub">Empilhado por local de detecção — os picos acompanham o ciclo solar de ~11 anos.</p>
+      <div class="grafico-box"><canvas id="g-barras"></canvas><div class="vazio" id="v-barras" hidden></div></div>
+    </div>
+    <div class="cartao">
+      <h2>Velocidade da CME × intensidade da tempestade</h2>
+      <p class="sub">Cada ponto é um choque com CME e tempestade ligadas (DONKI/CME + DONKI/GST).</p>
+      <div class="grafico-box"><canvas id="g-disp"></canvas><div class="vazio" id="v-disp" hidden></div></div>
+    </div>
+  </section>
+
+  <section class="cartao">
+    <h2>Eventos</h2>
+    <p class="sub">Clique numa linha para localizar o choque no mapa 3D.</p>
+    <div class="tabela-wrap">
+      <table>
+        <thead><tr>
+          <th>Data (UTC)</th><th>Local</th><th>CME</th><th>Kp</th><th>Eventos ligados</th><th>Instrumentos</th><th>Fonte</th>
+        </tr></thead>
+        <tbody id="corpo"></tbody>
+      </table>
+    </div>
+    <button id="mais" type="button" hidden>Mostrar mais</button>
+  </section>
+</main>
+
+<footer>
+  Dados: <a href="https://ccmc.gsfc.nasa.gov/tools/DONKI/" target="_blank" rel="noopener">NASA DONKI</a> (IPS, CME, GST) e
+  <a href="https://ssd.jpl.nasa.gov/horizons/" target="_blank" rel="noopener">JPL Horizons</a> ·
+  Pipeline: GitHub Actions → Supabase → GitHub Pages ·
+  <a href="https://github.com/SN-2026-GRUPO-14-NASA/DONKI-IPS" target="_blank" rel="noopener">Repositório</a> ·
+  SN-2026-GRUPO-14-NASA
+</footer>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
+
+// ===========================================================================
+// Configuração — apenas a URL e a publishable key (somente leitura via RLS).
+// A secret key NUNCA entra neste arquivo.
+// ===========================================================================
+const SUPABASE_URL = "https://xxbwvcqpdvdrqmwyfoww.supabase.co";
+const SUPABASE_KEY = "sb_publishable_MyoQwzy2BsCYKVIVGTgrQg_z_K7Iay5";
+
+const LOCAIS = {
+  "Earth":     { nome: "Terra (L1)", cor: "#3987e5", forma: "esfera" },
+  "STEREO A":  { nome: "STEREO A",   cor: "#d95926", forma: "esfera" },
+  "STEREO B":  { nome: "STEREO B",   cor: "#199e70", forma: "esfera" },
+  "MESSENGER": { nome: "MESSENGER",  cor: "#c3c2b7", forma: "losango" },
+};
+const COR_OUTRO = "#8a8f9c";
+const UA = 10;                 // 1 UA = 10 unidades na cena
+const DIA = 86400000;
+
+// ===========================================================================
+// Segurança: todo valor externo passa por escapeHtml antes de ir ao HTML
+// ===========================================================================
+function escapeHtml(valor) {
+  return String(valor ?? "")
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+}
+function urlSegura(url) {
+  try { const u = new URL(url); return u.protocol === "https:" ? u.href : null; }
+  catch { return null; }
+}
+
+// ===========================================================================
+// Acesso ao Supabase (API REST) com paginação — o Supabase devolve no
+// máximo 1000 linhas por requisição.
+// ===========================================================================
+async function supabase(tabela, query, inicio = 0, fim = 999) {
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/${tabela}?${query}`, {
+    headers: { apikey: SUPABASE_KEY, Range: `${inicio}-${fim}`, "Range-Unit": "items" },
+  });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} em ${tabela}`);
+  return resp.json();
+}
+async function buscarTodos(tabela, query) {
+  const todos = [];
+  for (let inicio = 0; ; inicio += 1000) {
+    const pagina = await supabase(tabela, query, inicio, inicio + 999);
+    todos.push(...pagina);
+    if (pagina.length < 1000) return todos;
+  }
+}
+
+// ===========================================================================
+// Utilidades de dados
+// ===========================================================================
+const fmtData = (d) => d.toISOString().slice(0, 10);
+const fmtDataHora = (d) => d.toISOString().slice(0, 16).replace("T", " ");
+const fmtNum = (n, casas = 0) => n == null ? "—" : Number(n).toLocaleString("pt-BR", { maximumFractionDigits: casas, minimumFractionDigits: casas });
+const tipoEvento = (id) => { const p = String(id).split("-"); return p.length >= 2 ? p[p.length - 2] : "?"; };
+const dataDoId = (id) => { const d = new Date(String(id).slice(0, 19) + "Z"); return isNaN(d) ? null : d; };
+function escalaG(kp) {
+  if (kp == null) return "";
+  if (kp >= 9) return "G5"; if (kp >= 8) return "G4"; if (kp >= 7) return "G3";
+  if (kp >= 6) return "G2"; if (kp >= 5) return "G1"; return "abaixo de G1";
+}
+const infoLocal = (loc) => LOCAIS[loc] || { nome: loc || "Desconhecido", cor: COR_OUTRO, forma: "esfera" };
+
+// ===========================================================================
+// Astronomia — posições aproximadas (elementos orbitais J2000, JPL/Standish)
+// Usadas para os planetas e como reserva quando não há posição do Horizons.
+// ===========================================================================
+const ELEMENTOS = {
+  // a (UA), e, I, L, varpi, Omega (graus) e taxas por século
+  Mercurio: [0.38709927, 0.20563593, 7.00497902, 252.25032350, 77.45779628, 48.33076593, 0, 0.00001906, -0.00594749, 149472.67411175, 0.16047689, -0.12534081],
+  Venus:    [0.72333566, 0.00677672, 3.39467605, 181.97909950, 131.60246718, 76.67984255, 0, -0.00004107, -0.00078890, 58517.81538729, 0.00268329, -0.27769418],
+  Terra:    [1.00000261, 0.01671123, -0.00001531, 100.46457166, 102.93768193, 0, 0, -0.00004392, -0.01294668, 35999.37244981, 0.32327364, 0],
+  Marte:    [1.52371034, 0.09339410, 1.84969142, -4.55343205, -23.94362959, 49.55953891, 0, 0.00007882, -0.00813131, 19140.30268499, 0.44441088, -0.29257343],
+};
+const rad = (g) => g * Math.PI / 180;
+function posicaoPlaneta(nome, data) {
+  const el = ELEMENTOS[nome];
+  const T = (data.getTime() / DIA + 2440587.5 - 2451545.0) / 36525;
+  const a = el[0], e = el[1] + el[7] * T, I = rad(el[2] + el[8] * T);
+  const L = el[3] + el[9] * T, varpi = el[4] + el[10] * T, Om = el[5] + el[11] * T;
+  const w = rad(varpi - Om), O = rad(Om);
+  let M = rad(((L - varpi) % 360 + 540) % 360 - 180);
+  let E = M + e * Math.sin(M);
+  for (let i = 0; i < 6; i++) E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+  const xp = a * (Math.cos(E) - e), yp = a * Math.sqrt(1 - e * e) * Math.sin(E);
+  const cw = Math.cos(w), sw = Math.sin(w), cO = Math.cos(O), sO = Math.sin(O), cI = Math.cos(I), sI = Math.sin(I);
+  return {
+    x: (cw * cO - sw * sO * cI) * xp + (-sw * cO - cw * sO * cI) * yp,
+    y: (cw * sO + sw * cO * cI) * xp + (-sw * sO + cw * cO * cI) * yp,
+    z: (sw * sI) * xp + (cw * sI) * yp,
+  };
+}
+// STEREO: deriva de ~22°/ano em relação à Terra desde jan/2007 (A à frente, B atrás)
+function posicaoStereo(qual, data) {
+  const anos = (data.getTime() - Date.UTC(2007, 0, 1)) / (365.25 * DIA);
+  const t = posicaoPlaneta("Terra", data);
+  const lonTerra = Math.atan2(t.y, t.x);
+  const sep = rad(qual === "A" ? 21.65 * anos : -21.1 * anos);
+  const r = qual === "A" ? 0.96 : 1.04;
+  return { x: r * Math.cos(lonTerra + sep), y: r * Math.sin(lonTerra + sep), z: 0 };
+}
+function posicaoEvento(ev) {
+  if (ev.nave_x != null) return { p: { x: ev.nave_x, y: ev.nave_y, z: ev.nave_z }, aprox: false };
+  const d = ev._data;
+  let p;
+  if (ev.location === "STEREO A") p = posicaoStereo("A", d);
+  else if (ev.location === "STEREO B") p = posicaoStereo("B", d);
+  else if (ev.location === "MESSENGER") p = posicaoPlaneta("Mercurio", d);
+  else { const t = posicaoPlaneta("Terra", d); const r = Math.hypot(t.x, t.y, t.z); const f = (r - 0.01) / r; p = { x: t.x * f, y: t.y * f, z: t.z * f }; }
+  return { p, aprox: true };
+}
+// Eclíptica (x, y, z) -> cena Three.js (y para cima)
+const paraCena = (p) => new THREE.Vector3(p.x * UA, p.z * UA, -p.y * UA);
+
+// ===========================================================================
+// Estado
+// ===========================================================================
+const estado = {
+  todos: [], filtrados: [], selecionado: null,
+  tMin: Date.UTC(2010, 0, 1), tMax: Date.now(), t: Date.now(),
+  tocando: false, mostrarTodos: true, limiteTabela: 50,
+};
+
+// ===========================================================================
+// Cena 3D
+// ===========================================================================
+const cenaEl = document.getElementById("cena");
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+cenaEl.prepend(renderer.domElement);
+const rotulosRenderer = new CSS2DRenderer({ element: document.getElementById("rotulos") });
+
+const cena = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000);
+camera.position.set(0, 13, 17);
+const controles = new OrbitControls(camera, renderer.domElement);
+controles.enableDamping = true;
+controles.minDistance = 4; controles.maxDistance = 60;
+controles.autoRotate = true; controles.autoRotateSpeed = 0.25;
+renderer.domElement.addEventListener("pointerdown", () => { controles.autoRotate = false; });
+
+// Estrelas de fundo
+{
+  const n = 1800, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const v = new THREE.Vector3().randomDirection().multiplyScalar(300 + Math.random() * 400);
+    pos.set([v.x, v.y, v.z], i * 3);
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  cena.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0x8b93a8, size: 1.1, sizeAttenuation: false })));
+}
+
+// Sol com brilho
+function texturaBrilho(cor) {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const g = c.getContext("2d"), grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, cor); grad.addColorStop(0.25, cor + "aa"); grad.addColorStop(1, cor + "00");
+  g.fillStyle = grad; g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+const sol = new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 16), new THREE.MeshBasicMaterial({ color: 0xffc46b }));
+cena.add(sol);
+const brilho = new THREE.Sprite(new THREE.SpriteMaterial({ map: texturaBrilho("#ffb347"), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+brilho.scale.set(4.5, 4.5, 1); cena.add(brilho);
+
+function rotulo(texto, classe = "") {
+  const div = document.createElement("div"); div.className = "rotulo " + classe; div.textContent = texto;
+  return new CSS2DObject(div);
+}
+sol.add(rotulo("Sol"));
+
+// Órbitas e planetas
+const planetas = {};
+const coresPlaneta = { Mercurio: 0x9a9a9a, Venus: 0xd9c79a, Terra: 0x3987e5, Marte: 0xc1663c };
+const nomesPlaneta = { Mercurio: "Mercúrio", Venus: "Vênus", Terra: "Terra", Marte: "Marte" };
+for (const nome of Object.keys(ELEMENTOS)) {
+  const pts = [], base = Date.UTC(2020, 0, 1), periodo = 365.25 * Math.pow(ELEMENTOS[nome][0], 1.5);
+  for (let i = 0; i <= 256; i++) pts.push(paraCena(posicaoPlaneta(nome, new Date(base + (i / 256) * periodo * DIA))));
+  const orbita = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0x2a3550, transparent: true, opacity: 0.9 }));
+  cena.add(orbita);
+  const m = new THREE.Mesh(new THREE.SphereGeometry(nome === "Terra" ? 0.16 : 0.11, 20, 12),
+    new THREE.MeshBasicMaterial({ color: coresPlaneta[nome] }));
+  m.add(rotulo(nomesPlaneta[nome]));
+  cena.add(m); planetas[nome] = m;
+}
+// Naves STEREO (posição aproximada na data da linha do tempo)
+const naves = {};
+for (const [q, cor] of [["A", 0xd95926], ["B", 0x199e70]]) {
+  const m = new THREE.Mesh(new THREE.OctahedronGeometry(0.09), new THREE.MeshBasicMaterial({ color: cor, wireframe: true }));
+  m.add(rotulo("STEREO " + q, "nave")); cena.add(m); naves[q] = m;
+}
+
+// Choques: InstancedMesh (um para esferas, outro para losangos/MESSENGER)
+const geoEsfera = new THREE.SphereGeometry(1, 12, 8);
+const geoLosango = new THREE.OctahedronGeometry(1.25);
+const matPontos = new THREE.MeshBasicMaterial({ color: 0xffffff });
+let grupos = [];   // [{ malha, eventos }]
+const aux = new THREE.Object3D(), corAux = new THREE.Color(), corFundo = new THREE.Color("#05070d");
+
+function tamanhoPonto(ev) { return ev.kp_max != null ? 0.07 + ev.kp_max * 0.012 : 0.07; }
+
+function reconstruirPontos() {
+  for (const g of grupos) { cena.remove(g.malha); g.malha.dispose(); }
+  grupos = [];
+  const porForma = { esfera: [], losango: [] };
+  for (const ev of estado.filtrados) porForma[infoLocal(ev.location).forma].push(ev);
+  for (const [forma, eventos] of Object.entries(porForma)) {
+    if (!eventos.length) continue;
+    const malha = new THREE.InstancedMesh(forma === "losango" ? geoLosango : geoEsfera, matPontos, eventos.length);
+    malha.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    eventos.forEach((ev, i) => {
+      aux.position.copy(ev._v); aux.scale.setScalar(tamanhoPonto(ev)); aux.updateMatrix();
+      malha.setMatrixAt(i, aux.matrix);
+      malha.setColorAt(i, corAux.set(infoLocal(ev.location).cor));
+    });
+    cena.add(malha); grupos.push({ malha, eventos });
+  }
+  atualizarBrilhoPontos();
+}
+
+// Na linha do tempo: choques futuros somem, recentes brilham, antigos esmaecem
+function atualizarBrilhoPontos() {
+  for (const { malha, eventos } of grupos) {
+    eventos.forEach((ev, i) => {
+      let f = 1, escala = tamanhoPonto(ev);
+      if (!estado.mostrarTodos) {
+        const idade = (estado.t - ev._t) / DIA;
+        if (idade < 0) { f = 0; escala = 0; }
+        else if (idade < 20) { f = 1; escala *= 1 + 1.2 * (1 - idade / 20); }
+        else f = Math.max(0.22, 1 - (idade - 20) / 200);
+      }
+      if (estado.selecionado && ev !== estado.selecionado) f *= 0.45;
+      aux.position.copy(ev._v); aux.scale.setScalar(escala); aux.updateMatrix();
+      malha.setMatrixAt(i, aux.matrix);
+      malha.setColorAt(i, corAux.set(infoLocal(ev.location).cor).lerp(corFundo, 1 - f));
+    });
+    malha.instanceMatrix.needsUpdate = true;
+    if (malha.instanceColor) malha.instanceColor.needsUpdate = true;
+  }
+}
+
+function posicionarCorpos(data) {
+  for (const [nome, m] of Object.entries(planetas)) m.position.copy(paraCena(posicaoPlaneta(nome, data)));
+  const ano = data.getUTCFullYear() + data.getUTCMonth() / 12;
+  naves.A.visible = ano >= 2007;
+  naves.B.visible = ano >= 2007 && ano < 2014.75;   // STEREO B perdeu contato em out/2014
+  naves.A.position.copy(paraCena(posicaoStereo("A", data)));
+  naves.B.position.copy(paraCena(posicaoStereo("B", data)));
+}
+
+// ---------- Seleção: anel na nave + cone da CME saindo do Sol ----------
+const anel = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.27, 48),
+  new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true }));
+anel.visible = false; cena.add(anel);
+const linhaSel = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: 0xa3acc0, dashSize: 0.2, gapSize: 0.15 }));
+linhaSel.visible = false; cena.add(linhaSel);
+let cone = null, animInicio = 0;
+
+function direcaoCme(ev) {
+  // Longitude de Stonyhurst: 0 = direção da Terra quando a CME saiu; positivo = oeste
+  const dataCme = dataDoId(ev.cme_id) || ev._data;
+  const t = posicaoPlaneta("Terra", dataCme);
+  const lon = Math.atan2(t.y, t.x) + rad(ev.cme_longitude ?? 0);
+  const lat = rad(ev.cme_latitude ?? 0);
+  return paraCena({ x: Math.cos(lat) * Math.cos(lon), y: Math.cos(lat) * Math.sin(lon), z: Math.sin(lat) }).normalize();
+}
+
+function selecionar(ev, focar = true) {
+  estado.selecionado = ev;
+  if (cone) { cena.remove(cone); cone.geometry.dispose(); cone = null; }
+  if (!ev) { anel.visible = linhaSel.visible = false; fecharDetalhe(); atualizarBrilhoPontos(); return; }
+
+  estado.t = ev._t; sincronizarSlider(); posicionarCorpos(ev._data);
+  anel.position.copy(ev._v); anel.lookAt(camera.position); anel.visible = true;
+  linhaSel.geometry.setFromPoints([new THREE.Vector3(), ev._v]); linhaSel.computeLineDistances(); linhaSel.visible = true;
+
+  if (ev.cme_longitude != null) {
+    const dist = ev._v.length();
+    const meia = rad(Math.min(Math.max(ev.cme_meia_largura ?? 30, 5), 80));
+    const geo = new THREE.ConeGeometry(Math.tan(meia) * dist, dist, 40, 1, true);
+    geo.translate(0, -dist / 2, 0); geo.rotateX(Math.PI);          // ápice no Sol, abre ao longo de +Y
+    cone = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+      color: 0xffb347, transparent: true, opacity: 0.06, side: THREE.DoubleSide, depthWrite: false,
+      blending: THREE.AdditiveBlending }));
+    // Borda da frente da CME (círculo na base do cone)
+    const raioFrente = Math.tan(meia) * dist, pts = [];
+    for (let i = 0; i <= 64; i++) { const a = (i / 64) * Math.PI * 2; pts.push(new THREE.Vector3(Math.cos(a) * raioFrente, dist, Math.sin(a) * raioFrente)); }
+    cone.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+      new THREE.LineBasicMaterial({ color: 0xffb347, transparent: true, opacity: 0.8 })));
+    cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direcaoCme(ev));
+    cone.scale.setScalar(0.001); cena.add(cone); animInicio = performance.now();
+  }
+  if (focar) { controles.autoRotate = false; controles.target.lerp(ev._v.clone().multiplyScalar(0.5), 0.6); }
+  atualizarBrilhoPontos();
+  mostrarDetalhe(ev);
+}
+
+// ---------- Interação: hover e clique ----------
+const raycaster = new THREE.Raycaster(), mouse = new THREE.Vector2();
+const dica = document.getElementById("dica");
+function eventoSobMouse(e) {
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  raycaster.setFromCamera(mouse, camera);
+  let melhor = null;
+  for (const g of grupos) {
+    const hit = raycaster.intersectObject(g.malha)[0];
+    if (hit && (!melhor || hit.distance < melhor.dist)) {
+      const ev = g.eventos[hit.instanceId];
+      if (estado.mostrarTodos || ev._t <= estado.t) melhor = { ev, dist: hit.distance };
+    }
+  }
+  return melhor?.ev || null;
+}
+renderer.domElement.addEventListener("pointermove", (e) => {
+  const ev = eventoSobMouse(e);
+  renderer.domElement.style.cursor = ev ? "pointer" : "grab";
+  if (!ev) { dica.style.display = "none"; return; }
+  const r = cenaEl.getBoundingClientRect();
+  dica.innerHTML = `<div class="mono">${escapeHtml(fmtDataHora(ev._data))} UTC</div>
+    <div>${escapeHtml(infoLocal(ev.location).nome)}${ev.kp_max != null ? ` · Kp ${escapeHtml(fmtNum(ev.kp_max, 1))}` : ""}${ev.cme_velocidade != null ? ` · CME ${escapeHtml(fmtNum(ev.cme_velocidade))} km/s` : ""}</div>`;
+  dica.style.display = "block";
+  dica.style.left = Math.min(e.clientX - r.left + 14, r.width - 240) + "px";
+  dica.style.top = (e.clientY - r.top + 14) + "px";
+});
+renderer.domElement.addEventListener("pointerleave", () => { dica.style.display = "none"; });
+let pontoDown = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { pontoDown = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener("click", (e) => {
+  if (pontoDown && Math.hypot(e.clientX - pontoDown[0], e.clientY - pontoDown[1]) > 5) return; // foi arraste
+  const ev = eventoSobMouse(e);
+  if (ev) selecionar(ev);
+});
+
+// ---------- Painel de detalhe ----------
+const detalhe = document.getElementById("detalhe");
+function fecharDetalhe() { detalhe.classList.remove("aberto"); detalhe.innerHTML = ""; }
+function mostrarDetalhe(ev) {
+  const loc = infoLocal(ev.location);
+  const link = urlSegura(ev.link);
+  const distSol = ev._v.length() / UA;
+  const elos = [];
+  if (ev.cme_id) {
+    elos.push(`<div class="elo"><div class="trilho"><span class="bola" style="border-color:var(--sun)"></span><span class="linha"></span></div>
+      <div class="txt"><b>Ejeção de massa coronal</b>
+      <span class="valor">${escapeHtml(fmtNum(ev.cme_velocidade))} km/s</span>
+      <div>${escapeHtml(fmtDataHora(dataDoId(ev.cme_id) || ev._data))} UTC · tipo ${escapeHtml(ev.cme_tipo || "—")} · abertura ${escapeHtml(fmtNum((ev.cme_meia_largura ?? 0) * 2))}°</div></div></div>`);
+  }
+  elos.push(`<div class="elo"><div class="trilho"><span class="bola" style="border-color:${loc.cor}"></span><span class="linha"></span></div>
+    <div class="txt"><b>Choque interplanetário</b>
+    <span class="valor">${escapeHtml(loc.nome)}</span>
+    <div>${escapeHtml(fmtDataHora(ev._data))} UTC · ${escapeHtml(fmtNum(distSol, 2))} UA do Sol</div></div></div>`);
+  if (ev.kp_max != null) {
+    elos.push(`<div class="elo"><div class="trilho"><span class="bola" style="border-color:#f0a0a0"></span><span class="linha"></span></div>
+      <div class="txt"><b>Tempestade geomagnética</b>
+      <span class="valor">Kp ${escapeHtml(fmtNum(ev.kp_max, 2))}</span>
+      <div>Escala NOAA: ${escapeHtml(escalaG(ev.kp_max))}</div></div></div>`);
+  }
+  const outros = (ev.linked_events || []).filter((id) => id !== ev.cme_id && id !== ev.gst_id);
+  detalhe.innerHTML = `
+    <button class="fechar" aria-label="Fechar">×</button>
+    <h3>${escapeHtml(ev.activity_id)}</h3>
+    <div class="sub">Catálogo ${escapeHtml(ev.catalog || "—")}</div>
+    <div class="cadeia">${elos.join("")}</div>
+    <dl class="campos">
+      <dt>Instrumentos</dt><dd>${(ev.instruments || []).map(escapeHtml).join("<br>") || "—"}</dd>
+      <dt>Outros ligados</dt><dd>${outros.map((id) => `<span class="chip ${escapeHtml(tipoEvento(id))}">${escapeHtml(tipoEvento(id))}</span> ${escapeHtml(id.slice(0, 16))}`).join("<br>") || "—"}</dd>
+      <dt>Fonte</dt><dd>${link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener">Ver no DONKI ↗</a>` : "—"}</dd>
+    </dl>
+    ${ev._aprox ? `<div class="aviso-aprox">Posição aproximada (sem dados do JPL Horizons para este evento).</div>` : ""}`;
+  detalhe.querySelector(".fechar").onclick = () => selecionar(null);
+  detalhe.classList.add("aberto");
+}
+
+// ---------- Linha do tempo ----------
+const slider = document.getElementById("tempo"), dataAtual = document.getElementById("data-atual");
+const btnPlay = document.getElementById("play"), chkTodos = document.getElementById("todos");
+function sincronizarSlider() {
+  slider.value = Math.round(((estado.t - estado.tMin) / (estado.tMax - estado.tMin)) * 1000);
+  dataAtual.textContent = fmtData(new Date(estado.t));
+}
+function aplicarTempo() {
+  posicionarCorpos(new Date(estado.t)); atualizarBrilhoPontos();
+  dataAtual.textContent = fmtData(new Date(estado.t));
+}
+slider.addEventListener("input", () => {
+  estado.t = estado.tMin + (slider.value / 1000) * (estado.tMax - estado.tMin);
+  if (estado.mostrarTodos) { estado.mostrarTodos = false; chkTodos.checked = false; }
+  aplicarTempo();
+});
+chkTodos.addEventListener("change", () => { estado.mostrarTodos = chkTodos.checked; atualizarBrilhoPontos(); });
+btnPlay.addEventListener("click", () => {
+  estado.tocando = !estado.tocando;
+  btnPlay.textContent = estado.tocando ? "❚❚" : "▶";
+  btnPlay.setAttribute("aria-label", estado.tocando ? "Pausar" : "Reproduzir linha do tempo");
+  if (estado.tocando) {
+    if (estado.selecionado) selecionar(null);
+    estado.mostrarTodos = false; chkTodos.checked = false;
+    if (estado.t >= estado.tMax - DIA) estado.t = estado.tMin;
+  }
+});
+
+// ---------- Laço de renderização ----------
+function redimensionar() {
+  const w = cenaEl.clientWidth, h = cenaEl.clientHeight;
+  renderer.setSize(w, h); rotulosRenderer.setSize(w, h);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener("resize", redimensionar); redimensionar();
+let ultimo = performance.now();
+function quadro(agora) {
+  const dt = Math.min((agora - ultimo) / 1000, 0.1); ultimo = agora;
+  if (estado.tocando) {
+    estado.t += dt * Number(document.getElementById("velocidade").value) * 6 * DIA;
+    if (estado.t >= estado.tMax) { estado.t = estado.tMax; btnPlay.click(); }
+    sincronizarSlider(); aplicarTempo();
+  }
+  if (cone) {
+    const p = Math.min((agora - animInicio) / 2200, 1);
+    cone.scale.setScalar(Math.max(1 - Math.pow(1 - p, 3), 0.001));
+  }
+  if (anel.visible) { anel.lookAt(camera.position); anel.material.opacity = 0.55 + 0.45 * Math.sin(agora / 250); }
+  brilho.material.rotation += dt * 0.05;
+  controles.update();
+  renderer.render(cena, camera); rotulosRenderer.render(cena, camera);
+  requestAnimationFrame(quadro);
+}
+requestAnimationFrame(quadro);
+
+// ===========================================================================
+// Filtros, indicadores, gráficos e tabela
+// ===========================================================================
+const fLocal = document.getElementById("f-local"), fAno = document.getElementById("f-ano");
+const fKp = document.getElementById("f-kp"), fBusca = document.getElementById("f-busca");
+
+function aplicarFiltros() {
+  const loc = fLocal.value, ano = fAno.value, kp = fKp.value, busca = fBusca.value.trim().toLowerCase();
+  estado.filtrados = estado.todos.filter((ev) => {
+    if (loc && ev.location !== loc) return false;
+    if (ano && ev._data.getUTCFullYear() !== Number(ano)) return false;
+    if (kp === "com" && ev.kp_max == null) return false;
+    if (kp && kp !== "com" && !(ev.kp_max >= Number(kp))) return false;
+    if (busca && !ev._texto.includes(busca)) return false;
+    return true;
+  });
+  if (estado.selecionado && !estado.filtrados.includes(estado.selecionado)) selecionar(null);
+  estado.limiteTabela = 50;
+  document.getElementById("contagem").innerHTML =
+    `<strong>${escapeHtml(fmtNum(estado.filtrados.length))}</strong> de ${escapeHtml(fmtNum(estado.todos.length))} choques`;
+  reconstruirPontos(); desenharKpis(); desenharGraficos(); desenharTabela();
+}
+for (const el of [fLocal, fAno, fKp]) el.addEventListener("change", aplicarFiltros);
+let tBusca; fBusca.addEventListener("input", () => { clearTimeout(tBusca); tBusca = setTimeout(aplicarFiltros, 200); });
+document.getElementById("limpar").addEventListener("click", () => {
+  fLocal.value = fAno.value = fKp.value = fBusca.value = ""; aplicarFiltros();
+});
+
+function desenharKpis() {
+  const evs = estado.filtrados, n = evs.length;
+  const comCme = evs.filter((e) => (e.linked_events || []).some((id) => tipoEvento(id) === "CME")).length;
+  const comGst = evs.filter((e) => (e.linked_events || []).some((id) => tipoEvento(id) === "GST")).length;
+  const kps = evs.filter((e) => e.kp_max != null);
+  const maiorKp = kps.reduce((m, e) => (!m || e.kp_max > m.kp_max ? e : m), null);
+  const vels = evs.filter((e) => e.cme_velocidade != null);
+  const maisRapida = vels.reduce((m, e) => (!m || e.cme_velocidade > m.cme_velocidade ? e : m), null);
+  const pct = (x) => n ? fmtNum((100 * x) / n) + "%" : "—";
+  const kpi = (rot, num, det) => `<div class="cartao kpi"><div class="rot">${escapeHtml(rot)}</div><div class="num">${escapeHtml(num)}</div><div class="det">${det}</div></div>`;
+  document.getElementById("kpis").innerHTML =
+    kpi("Choques", fmtNum(n), n ? `de ${escapeHtml(fmtData(evs[evs.length - 1]._data))} a ${escapeHtml(fmtData(evs[0]._data))}` : "nenhum no filtro") +
+    kpi("Causados por CME", pct(comCme), `${escapeHtml(fmtNum(comCme))} choques ligados a uma ejeção de massa coronal`) +
+    kpi("Geraram tempestade", pct(comGst), `${escapeHtml(fmtNum(comGst))} ligados a uma tempestade geomagnética`) +
+    kpi("Maior Kp", maiorKp ? fmtNum(maiorKp.kp_max, 2) : "—", maiorKp ? `${escapeHtml(escalaG(maiorKp.kp_max))} · ${escapeHtml(fmtData(maiorKp._data))}` : "sem dados de tempestade") +
+    kpi("CME mais rápida", maisRapida ? fmtNum(maisRapida.cme_velocidade) + " km/s" : "—", maisRapida ? escapeHtml(fmtData(maisRapida._data)) : "sem dados de CME");
+}
+
+// ---------- Gráficos (Chart.js) ----------
+Chart.defaults.color = "#a3acc0";
+Chart.defaults.font.family = "Sora, system-ui, sans-serif";
+Chart.defaults.borderColor = "#1f2a40";
+const tooltipBase = { backgroundColor: "#131a2b", borderColor: "#1f2a40", borderWidth: 1, titleColor: "#eef1f7", bodyColor: "#a3acc0", padding: 10 };
+let gBarras = null, gDisp = null;
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+function desenharGraficos() {
+  const evs = estado.filtrados;
+  const porAno = !fAno.value;
+  document.getElementById("titulo-barras").textContent = porAno ? "Choques por ano" : `Choques por mês em ${fAno.value}`;
+  let rotulos;
+  if (porAno) {
+    const anos = estado.todos.map((e) => e._data.getUTCFullYear());
+    const a0 = Math.min(...anos), a1 = Math.max(...anos);
+    rotulos = Array.from({ length: a1 - a0 + 1 }, (_, i) => String(a0 + i));
+  } else rotulos = MESES;
+  const chave = (e) => porAno ? String(e._data.getUTCFullYear()) : MESES[e._data.getUTCMonth()];
+  const locais = Object.keys(LOCAIS).filter((l) => evs.some((e) => e.location === l));
+  if (evs.some((e) => !LOCAIS[e.location])) locais.push("_outro");
+  const datasets = locais.map((l) => ({
+    label: l === "_outro" ? "Outro" : LOCAIS[l].nome,
+    data: rotulos.map((r) => evs.filter((e) => (l === "_outro" ? !LOCAIS[e.location] : e.location === l) && chave(e) === r).length),
+    backgroundColor: l === "_outro" ? COR_OUTRO : LOCAIS[l].cor,
+    borderColor: "#0d1220", borderWidth: { top: 2 }, borderRadius: 3, borderSkipped: "bottom",
+    maxBarThickness: 34,
+  }));
+  document.getElementById("v-barras").hidden = evs.length > 0;
+  document.getElementById("v-barras").textContent = "Nenhum choque com os filtros atuais.";
+  if (gBarras) gBarras.destroy();
+  gBarras = new Chart(document.getElementById("g-barras"), {
+    type: "bar", data: { labels: rotulos, datasets },
+    options: {
+      maintainAspectRatio: false, animation: { duration: 300 },
+      interaction: { mode: "index", intersect: false },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: "#161f33" }, title: { display: true, text: "choques" } },
+      },
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10, useBorderRadius: true, borderRadius: 2 } }, tooltip: tooltipBase },
+    },
+  });
+
+  const pontos = evs.filter((e) => e.cme_velocidade != null && e.kp_max != null)
+    .map((e) => ({ x: e.cme_velocidade, y: e.kp_max, ev: e }));
+  const v = document.getElementById("v-disp");
+  v.hidden = pontos.length > 0;
+  v.textContent = "Ainda não há choques com velocidade de CME e Kp — rode o pipeline com o enriquecimento.";
+  if (gDisp) gDisp.destroy();
+  gDisp = new Chart(document.getElementById("g-disp"), {
+    type: "scatter",
+    data: { datasets: [{ label: "Choques", data: pontos, backgroundColor: "rgba(255,179,71,.75)", borderColor: "#0d1220", borderWidth: 2, pointRadius: 5, pointHoverRadius: 8, pointHitRadius: 8 }] },
+    options: {
+      maintainAspectRatio: false, animation: { duration: 300 },
+      scales: {
+        x: { title: { display: true, text: "velocidade da CME (km/s)" }, grid: { color: "#161f33" } },
+        y: { min: 0, max: 9, title: { display: true, text: "Kp máximo" }, ticks: { stepSize: 1 }, grid: { color: "#161f33" } },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { ...tooltipBase, callbacks: {
+          title: (c) => fmtDataHora(c[0].raw.ev._data) + " UTC",
+          label: (c) => `CME ${fmtNum(c.raw.x)} km/s · Kp ${fmtNum(c.raw.y, 2)} (${escalaG(c.raw.y)})`,
+        } },
+      },
+      onClick: (_, els) => { if (els.length) { selecionar(pontos[els[0].index].ev); cenaEl.scrollIntoView({ behavior: "smooth" }); } },
+    },
+  });
+}
+
+// ---------- Tabela ----------
+const corpo = document.getElementById("corpo"), btnMais = document.getElementById("mais");
+function desenharTabela() {
+  const linhas = estado.filtrados.slice(0, estado.limiteTabela);
+  corpo.innerHTML = linhas.map((ev, i) => {
+    const loc = infoLocal(ev.location), link = urlSegura(ev.link);
+    const forma = loc.forma === "losango" ? " losango" : "";
+    return `<tr data-i="${i}">
+      <td class="mono">${escapeHtml(fmtDataHora(ev._data))}</td>
+      <td><span class="local"><span class="sw${forma}" style="background:${loc.cor}"></span>${escapeHtml(loc.nome)}</span></td>
+      <td class="mono">${ev.cme_velocidade != null ? escapeHtml(fmtNum(ev.cme_velocidade)) + " km/s" : "—"}</td>
+      <td class="kp">${ev.kp_max != null ? `${escapeHtml(fmtNum(ev.kp_max, 1))} <small>${escapeHtml(escalaG(ev.kp_max))}</small>` : "—"}</td>
+      <td>${(ev.linked_events || []).map((id) => `<span class="chip ${escapeHtml(tipoEvento(id))}" title="${escapeHtml(id)}">${escapeHtml(tipoEvento(id))}</span>`).join("") || "—"}</td>
+      <td>${(ev.instruments || []).map(escapeHtml).join(", ") || "—"}</td>
+      <td>${link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener">DONKI ↗</a>` : "—"}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="7" style="color:var(--text-muted)">Nenhum choque com os filtros atuais.</td></tr>`;
+  btnMais.hidden = estado.filtrados.length <= estado.limiteTabela;
+}
+corpo.addEventListener("click", (e) => {
+  if (e.target.closest("a")) return;
+  const tr = e.target.closest("tr[data-i]"); if (!tr) return;
+  selecionar(estado.filtrados[Number(tr.dataset.i)]);
+  cenaEl.scrollIntoView({ behavior: "smooth" });
+});
+btnMais.addEventListener("click", () => { estado.limiteTabela += 50; desenharTabela(); });
+
+// ---------- Legenda ----------
+document.getElementById("legenda").innerHTML = Object.values(LOCAIS).map((l) =>
+  `<div><span class="sw${l.forma === "losango" ? " losango" : ""}" style="background:${l.cor}"></span>${escapeHtml(l.nome)}</div>`).join("") +
+  `<div class="nota">Tamanho do ponto = Kp da tempestade causada</div>`;
+
+// ===========================================================================
+// Carregamento
+// ===========================================================================
+async function carregarStatus() {
+  const el = document.getElementById("status");
+  try {
+    const [ex] = await supabase("execucoes", "select=status,iniciado_em,finalizado_em,registros_processados&order=iniciado_em.desc&limit=1");
+    if (!ex) { el.innerHTML = `<span class="ponto"></span><span>Pipeline ainda não executado</span>`; return; }
+    const mapa = { concluido: ["var(--good)", "✓ concluído"], erro_parcial: ["var(--warning)", "⚠ erro parcial"],
+                   erro_critico: ["var(--critical)", "✕ erro crítico"], em_andamento: ["var(--text-muted)", "… em andamento"] };
+    const [cor, txt] = mapa[ex.status] || ["var(--text-muted)", ex.status];
+    const quando = new Date(ex.finalizado_em || ex.iniciado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+    el.innerHTML = `<span class="ponto" style="background:${cor}"></span>
+      <span>Última atualização: <strong>${escapeHtml(quando)}</strong> · ${escapeHtml(txt)}</span>`;
+  } catch (e) {
+    el.innerHTML = `<span class="ponto" style="background:var(--critical)"></span><span class="erro">Status indisponível</span>`;
+  }
+}
+
+async function carregarEventos() {
+  const carregando = document.getElementById("carregando");
+  try {
+    const dados = await buscarTodos("ips_eventos", "select=*&order=event_time.desc");
+    for (const ev of dados) {
+      ev._data = new Date(ev.event_time); ev._t = ev._data.getTime();
+      const { p, aprox } = posicaoEvento(ev); ev._v = paraCena(p); ev._aprox = aprox;
+      ev._texto = [ev.activity_id, ev.location, ev.catalog, ...(ev.instruments || []), ...(ev.linked_events || [])].join(" ").toLowerCase();
+    }
+    estado.todos = dados;
+    if (dados.length) {
+      estado.tMin = Math.min(...dados.map((e) => e._t)) - 30 * DIA;
+      estado.tMax = Math.max(Date.now(), ...dados.map((e) => e._t));
+    }
+    estado.t = estado.tMax;
+    const locais = [...new Set(dados.map((e) => e.location).filter(Boolean))].sort();
+    fLocal.innerHTML = `<option value="">Todos</option>` + locais.map((l) => `<option value="${escapeHtml(l)}">${escapeHtml(infoLocal(l).nome)}</option>`).join("");
+    const anos = [...new Set(dados.map((e) => e._data.getUTCFullYear()))].sort((a, b) => b - a);
+    fAno.innerHTML = `<option value="">Todos</option>` + anos.map((a) => `<option>${a}</option>`).join("");
+    carregando.remove();
+    sincronizarSlider(); posicionarCorpos(new Date(estado.t)); aplicarFiltros();
+  } catch (e) {
+    carregando.innerHTML = `<span class="erro">Não foi possível carregar os dados (${escapeHtml(e.message)}). Tente novamente mais tarde.</span>`;
+    console.error(e);
+  }
+}
+
+posicionarCorpos(new Date());
+carregarStatus();
+carregarEventos();
+</script>
 </body>
 </html>
