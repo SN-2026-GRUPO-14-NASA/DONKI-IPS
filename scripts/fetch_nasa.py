@@ -300,7 +300,9 @@ def melhor_analise(cme):
 
 
 def kp_maximo(gst):
-    valores = [numero(k.get("kpIndex")) for k in (gst.get("allKpValues") or []) if isinstance(k, dict)]
+    # A API usa "allKpIndex" (lista de medições de Kp a cada 3 horas)
+    medicoes = gst.get("allKpIndex") or gst.get("allKpValues") or []
+    valores = [numero(k.get("kpIndex")) for k in medicoes if isinstance(k, dict)]
     valores = [v for v in valores if v is not None]
     return max(valores) if valores else None
 
@@ -330,6 +332,8 @@ def enriquecer_cme_gst(registros, nasa_key, info):
 
     cmes = buscar_por_ids("CME", "activityID", ids_cme, nasa_key, info) if ids_cme else {}
     gsts = buscar_por_ids("GST", "gstID", ids_gst, nasa_key, info) if ids_gst else {}
+    log(f"  encontradas: {len(cmes)} CME(s) ({sum(1 for c in cmes.values() if melhor_analise(c))} com velocidade) | "
+        f"{len(gsts)} tempestade(s) ({sum(1 for g in gsts.values() if kp_maximo(g) is not None)} com Kp)")
 
     com_cme = com_gst = 0
     for r in registros:

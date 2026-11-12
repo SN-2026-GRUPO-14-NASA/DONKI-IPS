@@ -376,6 +376,25 @@ ok está legal, mas vamos adicionar mais dados
 
 ---
 
+## Interação 19 — Gráfico de Kp vazio (erro no nome do campo)
+
+**Data:** 12-11-2026
+**Objetivo:** Descobrir por que o gráfico "Velocidade da CME × intensidade da tempestade" estava vazio com o painel já publicado.
+
+**Prompt enviado à IA:** (print do painel publicado no GitHub Pages)
+
+```
+não ta rodando os dados problemas nas interações?
+```
+
+**Resumo da resposta:** A IA consultou o banco pela API REST: a carga histórica funcionou (1.413 choques, posições do Horizons e velocidades de CME preenchidas, 0 erros), mas `kp_max` estava vazio mesmo em choques com tempestade (GST) ligada. Ao consultar a API GST, descobriu que a lista de medições se chama `allKpIndex`, e não `allKpValues` como ela havia escrito. Corrigiu a função `kp_maximo()` e adicionou ao log quantas CMEs e tempestades foram encontradas com dados úteis, para que esse tipo de falha silenciosa apareça.
+
+**O que funcionou:** O diagnóstico pelo banco e a confirmação do formato real da API.
+
+**O que precisou ajuste:** Erro da IA: ela escreveu o nome do campo sem verificar a API real (a documentação não estava acessível no momento) e o teste com dados simulados usou o mesmo nome errado, então não pegou o problema. O erro não gerava exceção — o Kp simplesmente ficava vazio —, por isso o pipeline terminou como `concluido`. Lição: dados simulados só testam o que a gente já supõe; é preciso conferir com a resposta real da API.
+
+---
+
 <!-- Repita o bloco acima para cada interação com a IA -->
 
 &nbsp;
