@@ -151,6 +151,37 @@ ok vamos fazer sql
 
 ---
 
+## Interação 8 — Script do pipeline (fetch_nasa.py) e workflow
+
+**Data:** 12-11-2026
+**Objetivo:** Gerar o `scripts/fetch_nasa.py` (coleta, normalização, deduplicação e upsert) e o `.github/workflows/update-data.yml`.
+
+**Prompt enviado à IA:**
+
+```
+faça
+```
+
+**Resumo da resposta:** A IA gerou o script em Python (biblioteca `requests`, usando a API REST do Supabase). Ele busca a API em janelas de 180 dias (carga histórica desde 2010 quando o banco está vazio; últimos 60 dias nas execuções agendadas), normaliza os campos, deduplica por `activity_id` mantendo o maior `versionId` (evita o erro 21000), faz upsert em lotes de 500, registra a execução em `execucoes` e sai com `sys.exit(1)` em caso de erro. Gerou também o workflow com `cron` diário, `workflow_dispatch` (com datas opcionais), `permissions: contents: read`, `concurrency` e `timeout-minutes`.
+
+Trecho da deduplicação:
+
+```python
+def deduplicar(registros):
+    por_id = {}
+    for r in registros:
+        atual = por_id.get(r["activity_id"])
+        if atual is None or (r["version_id"] or 0) >= (atual["version_id"] or 0):
+            por_id[r["activity_id"]] = r
+    return list(por_id.values())
+```
+
+**O que funcionou:** A IA testou o script com dados simulados: duplicatas removidas, resposta vazia tratada como `concluido`, evento sem `activityID` descartado e falha de lote gerando `erro_critico` com saída 1.
+
+**O que precisou ajuste:** O primeiro teste da própria IA estava errado (os dados simulados não caíam na janela de datas certa) e foi corrigido. A pasta `.github` não pôde ser gravada pela IA no computador do grupo, então o arquivo do workflow foi movido manualmente.
+
+---
+
 <!-- Repita o bloco acima para cada interação com a IA -->
 
 &nbsp;

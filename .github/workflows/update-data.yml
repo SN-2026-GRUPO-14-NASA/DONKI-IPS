@@ -1,0 +1,53 @@
+name: Atualizar dados DONKI-IPS
+
+on:
+  # Execução agendada: todo dia às 09:00 UTC (06:00 em Brasília)
+  schedule:
+    - cron: "0 9 * * *"
+
+  # Execução manual (Actions -> Atualizar dados DONKI-IPS -> Run workflow)
+  workflow_dispatch:
+    inputs:
+      data_inicio:
+        description: "Data inicial (AAAA-MM-DD). Vazio = automático"
+        required: false
+        default: ""
+      data_fim:
+        description: "Data final (AAAA-MM-DD). Vazio = hoje"
+        required: false
+        default: ""
+
+# Boa prática: o workflow só precisa ler o repositório
+permissions:
+  contents: read
+
+# Boa prática: nunca duas coletas ao mesmo tempo
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15   # Boa prática: limite de tempo
+
+    steps:
+      - name: Baixar o repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: pip install requests==2.32.3
+
+      - name: Executar pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+          DATA_INICIO: ${{ github.event.inputs.data_inicio }}
+          DATA_FIM: ${{ github.event.inputs.data_fim }}
+        run: python scripts/fetch_nasa.py
