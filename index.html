@@ -153,6 +153,18 @@ main > *, .graficos > * { min-width: 0; }
 }
 #filtros input { min-width: 220px; }
 #filtros select:focus, #filtros input:focus { outline: 2px solid var(--loc-earth); outline-offset: 1px; }
+.btn-sec { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; cursor: pointer; color: var(--text-secondary); }
+.btn-sec:hover { border-color: var(--text-muted); color: var(--text-primary); }
+.btn-acao { margin-top: 10px; width: 100%; background: var(--surface-2); border: 1px solid #5a4220; color: var(--sun); border-radius: 8px; padding: 7px 10px; cursor: pointer; font-size: 13px; }
+.btn-acao:hover { border-color: var(--sun); }
+.irmaos { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.irmaos button { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12px; text-align: left; width: 100%; display: flex; align-items: center; gap: 6px; }
+.irmaos button:hover { border-color: var(--sun); }
+.secao-irmaos { margin: 4px 0 12px; padding: 10px; border: 1px dashed #5a4220; border-radius: 8px; font-size: 12px; color: var(--text-secondary); }
+.rodape-detalhe { display: flex; gap: 8px; margin-top: 12px; }
+.rodape-detalhe .btn-sec { font-size: 12px; padding: 5px 10px; }
+.st { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.st .ponto { width: 8px; height: 8px; border-radius: 50%; }
 #limpar { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; cursor: pointer; color: var(--text-secondary); }
 #contagem { margin-left: auto; font-size: 13px; color: var(--text-secondary); }
 #contagem strong { color: var(--text-primary); font-family: var(--mono); }
@@ -223,6 +235,7 @@ footer a { color: var(--text-secondary); }
     <h2>Onde os choques foram detectados</h2>
     <p>Cada ponto é um choque no vento solar, na posição da nave que o detectou. Arraste para girar, role para aproximar e clique num ponto para ver a cadeia do evento.</p>
     <div class="legenda" id="legenda"></div>
+    <button class="btn-acao" id="tour" type="button">★ Maiores tempestades</button>
   </div>
 
   <div class="sobre" id="detalhe" aria-live="polite"></div>
@@ -239,6 +252,7 @@ footer a { color: var(--text-secondary); }
       </select>
     </label>
     <label><input type="checkbox" id="todos" checked> Mostrar todos</label>
+    <label title="Mostra todas as linhas entre choques causados pela mesma CME em naves diferentes"><input type="checkbox" id="ligacoes"> Todas as ligações</label>
   </div>
 
   <div id="dica"></div>
@@ -266,6 +280,7 @@ footer a { color: var(--text-secondary); }
         <input type="search" id="f-busca" placeholder="ID, instrumento, evento ligado…">
       </label>
       <button id="limpar" type="button">Limpar</button>
+      <button id="csv" class="btn-sec" type="button">⬇ Exportar CSV</button>
       <div id="contagem"></div>
     </div>
   </section>
@@ -302,6 +317,16 @@ footer a { color: var(--text-secondary); }
       </table>
     </div>
     <button id="mais" type="button" hidden>Mostrar mais</button>
+  </section>
+  <section class="cartao">
+    <h2>Histórico do pipeline</h2>
+    <p class="sub">Últimas execuções do GitHub Actions, lidas da tabela <code>execucoes</code>.</p>
+    <div class="tabela-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Início</th><th>Duração</th><th>Período consultado</th><th>Recebidos</th><th>Gravados</th><th>Lotes</th><th>Erros</th><th>Status</th></tr></thead>
+        <tbody id="corpo-hist"><tr><td colspan="9" style="color:var(--text-muted)">Carregando…</td></tr></tbody>
+      </table>
+    </div>
   </section>
 </main>
 
@@ -441,6 +466,7 @@ const estado = {
   todos: [], filtrados: [], selecionado: null,
   tMin: Date.UTC(2010, 0, 1), tMax: Date.now(), t: Date.now(),
   tocando: false, mostrarTodos: true, limiteTabela: 50,
+  gruposCme: [], irmaos: new Set(), voo: null,
 };
 
 // ===========================================================================
@@ -552,7 +578,7 @@ function atualizarBrilhoPontos() {
         else if (idade < 20) { f = 1; escala *= 1 + 1.2 * (1 - idade / 20); }
         else f = Math.max(0.22, 1 - (idade - 20) / 200);
       }
-      if (estado.selecionado && ev !== estado.selecionado) f *= 0.45;
+      if (estado.selecionado && ev !== estado.selecionado && !estado.irmaos.has(ev)) f *= 0.45;
       aux.position.copy(ev._v); aux.scale.setScalar(escala); aux.updateMatrix();
       malha.setMatrixAt(i, aux.matrix);
       malha.setColorAt(i, corAux.set(infoLocal(ev.location).cor).lerp(corFundo, 1 - f));
@@ -588,10 +614,64 @@ function direcaoCme(ev) {
   return paraCena({ x: Math.cos(lat) * Math.cos(lon), y: Math.cos(lat) * Math.sin(lon), z: Math.sin(lat) }).normalize();
 }
 
+// ---------- Mesma CME detectada por naves diferentes ----------
+const ligacoes = new THREE.LineSegments(new THREE.BufferGeometry(),
+  new THREE.LineBasicMaterial({ color: 0xffb347, transparent: true, opacity: 0.35, depthWrite: false }));
+const ligSel = new THREE.LineSegments(new THREE.BufferGeometry(),
+  new THREE.LineBasicMaterial({ color: 0xffd08a, transparent: true, opacity: 0.95 }));
+cena.add(ligacoes, ligSel);
+const chkLig = document.getElementById("ligacoes");
+const cmesDe = (ev) => (ev.linked_events || []).filter((id) => tipoEvento(id) === "CME");
+function gruposMultiNave(eventos) {
+  const mapa = new Map();
+  for (const ev of eventos) for (const c of cmesDe(ev)) { if (!mapa.has(c)) mapa.set(c, []); mapa.get(c).push(ev); }
+  return [...mapa].filter(([, evs]) => new Set(evs.map((e) => e.location)).size >= 2);
+}
+function segmentos(grupos) {
+  const pts = [];
+  for (const [, evs] of grupos) {
+    for (let i = 0; i < evs.length; i++) for (let j = i + 1; j < evs.length; j++)
+      if (evs[i].location !== evs[j].location) pts.push(evs[i]._v, evs[j]._v);
+  }
+  return pts;
+}
+function reconstruirLigacoes() {
+  estado.gruposCme = gruposMultiNave(estado.filtrados);
+  ligacoes.geometry.dispose();
+  ligacoes.geometry = new THREE.BufferGeometry().setFromPoints(segmentos(estado.gruposCme));
+  const n = document.getElementById("nota-lig");
+  if (n) n.textContent = `${fmtNum(estado.gruposCme.length)} CMEs atingiram mais de uma nave — clique num choque para ver a ligação`;
+  atualizarVisLigacoes();
+}
+function atualizarVisLigacoes() {
+  // Todas as ligações só sob demanda (viram uma teia); as do choque selecionado aparecem sempre
+  ligacoes.visible = chkLig.checked && estado.mostrarTodos;
+  ligacoes.material.opacity = estado.selecionado ? 0.08 : 0.22;
+  ligSel.visible = !!estado.selecionado;
+}
+chkLig.addEventListener("change", atualizarVisLigacoes);
+
+// ---------- Voo da câmera ----------
+function voarPara(ev) {
+  const dir = ev._v.clone().normalize();
+  const destino = ev._v.clone().add(dir.multiplyScalar(7)).add(new THREE.Vector3(0, 8, 0));
+  controles.autoRotate = false;
+  estado.voo = { p0: camera.position.clone(), p1: destino, a0: controles.target.clone(),
+                 a1: ev._v.clone().multiplyScalar(0.5), t0: performance.now(), dur: 1800 };
+}
+
 function selecionar(ev, focar = true) {
   estado.selecionado = ev;
   if (cone) { cena.remove(cone); cone.geometry.dispose(); cone = null; }
-  if (!ev) { anel.visible = linhaSel.visible = false; fecharDetalhe(); atualizarBrilhoPontos(); return; }
+  // Link direto: o endereço passa a apontar para o choque selecionado
+  history.replaceState(null, "", ev ? "#" + encodeURIComponent(ev.activity_id) : location.pathname + location.search);
+  estado.irmaos = new Set();
+  if (!ev) { anel.visible = linhaSel.visible = false; fecharDetalhe(); atualizarVisLigacoes(); atualizarBrilhoPontos(); return; }
+  const grupos = estado.gruposCme.filter(([, evs]) => evs.includes(ev));
+  for (const [, evs] of grupos) for (const e of evs) if (e !== ev) estado.irmaos.add(e);
+  ligSel.geometry.dispose();
+  ligSel.geometry = new THREE.BufferGeometry().setFromPoints(segmentos(grupos));
+  atualizarVisLigacoes();
 
   estado.t = ev._t; sincronizarSlider(); posicionarCorpos(ev._data);
   anel.position.copy(ev._v); anel.lookAt(camera.position); anel.visible = true;
@@ -694,13 +774,26 @@ function mostrarDetalhe(ev) {
     <h3>${escapeHtml(ev.activity_id)}</h3>
     <div class="sub">Catálogo ${escapeHtml(ev.catalog || "—")}</div>
     <div class="cadeia">${elos.join("")}</div>
+    ${estado.irmaos.size ? `<div class="secao-irmaos">A mesma CME também atingiu:
+      <ul class="irmaos">${[...estado.irmaos].sort((a, b) => a._t - b._t).map((e) =>
+        `<li><button type="button" data-id="${escapeHtml(e.activity_id)}"><span class="sw${infoLocal(e.location).forma === "losango" ? " losango" : ""}" style="background:${infoLocal(e.location).cor}"></span>${escapeHtml(infoLocal(e.location).nome)} · ${escapeHtml(fmtDataHora(e._data))} UTC</button></li>`).join("")}</ul></div>` : ""}
     <dl class="campos">
       <dt>Instrumentos</dt><dd>${(ev.instruments || []).map(escapeHtml).join("<br>") || "—"}</dd>
       <dt>Outros ligados</dt><dd>${outros.map((id) => `<span class="chip ${escapeHtml(tipoEvento(id))}">${escapeHtml(tipoEvento(id))}</span> ${escapeHtml(id.slice(0, 16))}`).join("<br>") || "—"}</dd>
       <dt>Fonte</dt><dd>${link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener">Ver no DONKI ↗</a>` : "—"}</dd>
     </dl>
-    ${ev._aprox ? `<div class="aviso-aprox">Posição aproximada (sem dados do JPL Horizons para este evento).</div>` : ""}`;
+    ${ev._aprox ? `<div class="aviso-aprox">Posição aproximada (sem dados do JPL Horizons para este evento).</div>` : ""}
+    <div class="rodape-detalhe"><button type="button" class="btn-sec" id="copiar-link">🔗 Copiar link deste choque</button></div>`;
   detalhe.querySelector(".fechar").onclick = () => selecionar(null);
+  detalhe.querySelectorAll(".irmaos button").forEach((b) => b.onclick = () => {
+    const alvo = estado.todos.find((e) => e.activity_id === b.dataset.id);
+    if (alvo) { pararTour(); selecionar(alvo); voarPara(alvo); }
+  });
+  const btnLink = detalhe.querySelector("#copiar-link");
+  btnLink.onclick = async () => {
+    try { await navigator.clipboard.writeText(location.href); btnLink.textContent = "Link copiado ✓"; }
+    catch { btnLink.textContent = "Copie o endereço da barra do navegador"; }
+  };
   detalhe.classList.add("aberto");
 }
 
@@ -717,17 +810,18 @@ function aplicarTempo() {
 }
 slider.addEventListener("input", () => {
   estado.t = estado.tMin + (slider.value / 1000) * (estado.tMax - estado.tMin);
-  if (estado.mostrarTodos) { estado.mostrarTodos = false; chkTodos.checked = false; }
+  if (estado.mostrarTodos) { estado.mostrarTodos = false; chkTodos.checked = false; atualizarVisLigacoes(); }
   aplicarTempo();
 });
-chkTodos.addEventListener("change", () => { estado.mostrarTodos = chkTodos.checked; atualizarBrilhoPontos(); });
+chkTodos.addEventListener("change", () => { estado.mostrarTodos = chkTodos.checked; atualizarBrilhoPontos(); atualizarVisLigacoes(); });
 btnPlay.addEventListener("click", () => {
   estado.tocando = !estado.tocando;
   btnPlay.textContent = estado.tocando ? "❚❚" : "▶";
   btnPlay.setAttribute("aria-label", estado.tocando ? "Pausar" : "Reproduzir linha do tempo");
   if (estado.tocando) {
     if (estado.selecionado) selecionar(null);
-    estado.mostrarTodos = false; chkTodos.checked = false;
+    pararTour();
+    estado.mostrarTodos = false; chkTodos.checked = false; atualizarVisLigacoes();
     if (estado.t >= estado.tMax - DIA) estado.t = estado.tMin;
   }
 });
@@ -750,6 +844,11 @@ function quadro(agora) {
   if (cone) {
     const p = Math.min((agora - animInicio) / 2200, 1);
     cone.scale.setScalar(Math.max(1 - Math.pow(1 - p, 3), 0.001));
+  }
+  if (estado.voo) {
+    const v = estado.voo, p = Math.min((agora - v.t0) / v.dur, 1), e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+    camera.position.lerpVectors(v.p0, v.p1, e); controles.target.lerpVectors(v.a0, v.a1, e);
+    if (p >= 1) estado.voo = null;
   }
   if (anel.visible) { anel.lookAt(camera.position); anel.material.opacity = 0.55 + 0.45 * Math.sin(agora / 250); }
   brilho.material.rotation += dt * 0.05;
@@ -779,7 +878,7 @@ function aplicarFiltros() {
   estado.limiteTabela = 50;
   document.getElementById("contagem").innerHTML =
     `<strong>${escapeHtml(fmtNum(estado.filtrados.length))}</strong> de ${escapeHtml(fmtNum(estado.todos.length))} choques`;
-  reconstruirPontos(); desenharKpis(); desenharGraficos(); desenharGraficoViagem(); desenharTabela();
+  reconstruirPontos(); reconstruirLigacoes(); desenharKpis(); desenharGraficos(); desenharGraficoViagem(); desenharTabela();
 }
 for (const el of [fLocal, fAno, fKp]) el.addEventListener("change", aplicarFiltros);
 let tBusca; fBusca.addEventListener("input", () => { clearTimeout(tBusca); tBusca = setTimeout(aplicarFiltros, 200); });
@@ -942,19 +1041,115 @@ btnMais.addEventListener("click", () => { estado.limiteTabela += 50; desenharTab
 // ---------- Legenda ----------
 document.getElementById("legenda").innerHTML = Object.values(LOCAIS).map((l) =>
   `<div><span class="sw${l.forma === "losango" ? " losango" : ""}" style="background:${l.cor}"></span>${escapeHtml(l.nome)}</div>`).join("") +
-  `<div class="nota">Tamanho do ponto = Kp da tempestade causada</div>`;
+  `<div class="nota">Tamanho do ponto = Kp da tempestade causada</div>` +
+  `<div class="nota" id="nota-lig" style="margin-top:0"></div>`;
+
+// ===========================================================================
+// Tour "Maiores tempestades" — roteiro automático para a demonstração
+// ===========================================================================
+let tour = null;
+const btnTour = document.getElementById("tour");
+function iniciarTour() {
+  const top = estado.filtrados.filter((e) => e.kp_max != null)
+    .sort((a, b) => b.kp_max - a.kp_max || (b.cme_velocidade ?? 0) - (a.cme_velocidade ?? 0)).slice(0, 5);
+  if (!top.length) {
+    btnTour.textContent = "Sem tempestades nos filtros atuais";
+    setTimeout(() => { if (!tour) btnTour.textContent = "★ Maiores tempestades"; }, 2500);
+    return;
+  }
+  if (estado.tocando) btnPlay.click();
+  estado.mostrarTodos = true; chkTodos.checked = true;
+  tour = { lista: top, i: -1, timer: null };
+  proximoTour();
+}
+function proximoTour() {
+  if (!tour) return;
+  tour.i++;
+  if (tour.i >= tour.lista.length) { pararTour(); return; }
+  const ev = tour.lista[tour.i];
+  selecionar(ev, false); voarPara(ev);
+  btnTour.textContent = `■ Parar tour (${tour.i + 1}/${tour.lista.length})`;
+  tour.timer = setTimeout(proximoTour, 7000);
+}
+function pararTour() {
+  if (!tour) return;
+  clearTimeout(tour.timer); tour = null;
+  btnTour.textContent = "★ Maiores tempestades";
+}
+btnTour.addEventListener("click", () => (tour ? pararTour() : iniciarTour()));
+renderer.domElement.addEventListener("pointerdown", pararTour);   // o usuário assumiu o controle
+
+// ===========================================================================
+// Exportar CSV (choques filtrados)
+// ===========================================================================
+const COLUNAS_CSV = ["activity_id", "event_time", "location", "catalog", "cme_id", "cme_inicio", "cme_velocidade",
+  "cme_velocidade_media", "tempo_viagem_h", "cme_latitude", "cme_longitude", "cme_meia_largura", "cme_tipo",
+  "gst_id", "kp_max", "nave_x", "nave_y", "nave_z", "instruments", "linked_events", "link"];
+function celulaCsv(valor) {
+  if (valor == null) return "";
+  let txt = Array.isArray(valor) ? valor.join("; ") : String(valor);
+  if (typeof valor === "string" && /^[=+\-@\t\r]/.test(txt)) txt = "'" + txt;   // evita injeção de fórmulas no Excel
+  return /[",;\n\r]/.test(txt) ? `"${txt.replaceAll('"', '""')}"` : txt;
+}
+document.getElementById("csv").addEventListener("click", () => {
+  const linhas = [COLUNAS_CSV.join(","), ...estado.filtrados.map((ev) => COLUNAS_CSV.map((c) => celulaCsv(ev[c])).join(","))];
+  const url = URL.createObjectURL(new Blob(["\ufeff" + linhas.join("\r\n")], { type: "text/csv;charset=utf-8" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: `donki-ips-choques-${fmtData(new Date())}.csv` });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+// ===========================================================================
+// Link direto: #ID-do-choque abre o painel com o evento selecionado
+// ===========================================================================
+function abrirDoHash() {
+  const id = decodeURIComponent(location.hash.slice(1));
+  if (!id || estado.selecionado?.activity_id === id) return;
+  const ev = estado.todos.find((e) => e.activity_id === id);
+  if (!ev) return;
+  if (!estado.filtrados.includes(ev)) document.getElementById("limpar").click();
+  selecionar(ev, false); voarPara(ev);
+}
+addEventListener("hashchange", abrirDoHash);
 
 // ===========================================================================
 // Carregamento
 // ===========================================================================
+const STATUS = { concluido: ["var(--good)", "✓ concluído"], erro_parcial: ["var(--warning)", "⚠ erro parcial"],
+                 erro_critico: ["var(--critical)", "✕ erro crítico"], em_andamento: ["var(--text-muted)", "… em andamento"] };
+function duracao(ini, fim) {
+  if (!fim) return "—";
+  const s = Math.round((new Date(fim) - new Date(ini)) / 1000);
+  return s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`;
+}
+async function carregarHistorico() {
+  const corpoH = document.getElementById("corpo-hist");
+  try {
+    const lista = await supabase("execucoes", "select=id,status,iniciado_em,finalizado_em,data_inicio,data_fim,registros_recebidos,registros_processados,lotes,erros&order=iniciado_em.desc&limit=10");
+    corpoH.innerHTML = lista.map((ex) => {
+      const [cor, txt] = STATUS[ex.status] || ["var(--text-muted)", ex.status];
+      return `<tr style="cursor:default">
+        <td class="mono">${escapeHtml(ex.id)}</td>
+        <td class="mono">${escapeHtml(new Date(ex.iniciado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }))}</td>
+        <td class="mono">${escapeHtml(duracao(ex.iniciado_em, ex.finalizado_em))}</td>
+        <td class="mono">${escapeHtml(ex.data_inicio ?? "—")} → ${escapeHtml(ex.data_fim ?? "—")}</td>
+        <td class="mono">${escapeHtml(fmtNum(ex.registros_recebidos))}</td>
+        <td class="mono">${escapeHtml(fmtNum(ex.registros_processados))}</td>
+        <td class="mono">${escapeHtml(fmtNum(ex.lotes))}</td>
+        <td class="mono">${escapeHtml(fmtNum(ex.erros))}</td>
+        <td><span class="st"><span class="ponto" style="background:${cor}"></span>${escapeHtml(txt)}</span></td></tr>`;
+    }).join("") || `<tr><td colspan="9" style="color:var(--text-muted)">Nenhuma execução registrada.</td></tr>`;
+  } catch {
+    corpoH.innerHTML = `<tr><td colspan="9" class="erro">Histórico indisponível.</td></tr>`;
+  }
+}
+
 async function carregarStatus() {
   const el = document.getElementById("status");
   try {
     const [ex] = await supabase("execucoes", "select=status,iniciado_em,finalizado_em,registros_processados&order=iniciado_em.desc&limit=1");
     if (!ex) { el.innerHTML = `<span class="ponto"></span><span>Pipeline ainda não executado</span>`; return; }
-    const mapa = { concluido: ["var(--good)", "✓ concluído"], erro_parcial: ["var(--warning)", "⚠ erro parcial"],
-                   erro_critico: ["var(--critical)", "✕ erro crítico"], em_andamento: ["var(--text-muted)", "… em andamento"] };
-    const [cor, txt] = mapa[ex.status] || ["var(--text-muted)", ex.status];
+    const [cor, txt] = STATUS[ex.status] || ["var(--text-muted)", ex.status];
     const quando = new Date(ex.finalizado_em || ex.iniciado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
     el.innerHTML = `<span class="ponto" style="background:${cor}"></span>
       <span>Última atualização: <strong>${escapeHtml(quando)}</strong> · ${escapeHtml(txt)}</span>`;
@@ -984,6 +1179,7 @@ async function carregarEventos() {
     fAno.innerHTML = `<option value="">Todos</option>` + anos.map((a) => `<option>${a}</option>`).join("");
     carregando.remove();
     sincronizarSlider(); posicionarCorpos(new Date(estado.t)); aplicarFiltros();
+    abrirDoHash();
   } catch (e) {
     carregando.innerHTML = `<span class="erro">Não foi possível carregar os dados (${escapeHtml(e.message)}). Tente novamente mais tarde.</span>`;
     console.error(e);
@@ -992,6 +1188,7 @@ async function carregarEventos() {
 
 posicionarCorpos(new Date());
 carregarStatus();
+carregarHistorico();
 carregarEventos();
 </script>
 </body>

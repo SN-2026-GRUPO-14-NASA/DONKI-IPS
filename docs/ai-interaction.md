@@ -395,6 +395,44 @@ não ta rodando os dados problemas nas interações?
 
 ---
 
+## Interação 20 — Ideias de novas funcionalidades
+
+**Data:** 12-11-2026
+**Objetivo:** Pedir sugestões de funcionalidades extras para o painel.
+
+**Prompt enviado à IA:**
+
+```
+ok tudo funcionando, alguma ideia amais de funcionalidade?
+```
+
+**Resumo da resposta:** A IA lembrou o prazo e as entregas obrigatórias pendentes e sugeriu cinco funcionalidades rápidas (mesma CME vista por várias naves, tour "Maiores tempestades", histórico do pipeline, link direto para um choque, exportar CSV) e duas maiores (previsão ENLIL × realidade, vento solar via OMNI). A primeira veio de um padrão real encontrado nos dados do grupo: uma CME de 08/10/2026 ligada a choques na Terra e na STEREO A.
+
+**O que funcionou:** As sugestões rápidas foram todas aceitas.
+
+**O que precisou ajuste:** —
+
+---
+
+## Interação 21 — Implementação das cinco funcionalidades
+
+**Data:** 12-11-2026
+**Objetivo:** Implementar todas as funcionalidades rápidas sugeridas.
+
+**Prompt enviado à IA:**
+
+```
+vamos fazer tudo
+```
+
+**Resumo da resposta:** A IA implementou no index.html: (1) ligação, no mapa 3D, entre choques causados pela mesma CME em naves diferentes, com a lista "A mesma CME também atingiu" no detalhe; (2) tour automático pelos 5 choques de maior Kp, com voo de câmera, que para quando o usuário mexe na cena; (3) tabela "Histórico do pipeline" com as últimas 10 execuções (duração, período, registros, erros, status); (4) link direto `#ID-do-choque` e botão "Copiar link"; (5) exportação CSV dos choques filtrados, com proteção contra injeção de fórmulas no Excel.
+
+**O que funcionou:** Testes automatizados no navegador confirmaram as cinco funcionalidades e a versão de celular.
+
+**O que precisou ajuste:** Com todas as ligações acesas, as linhas formavam uma teia que cobria o mapa. A IA passou a mostrar por padrão só as ligações do choque selecionado, deixando "Todas as ligações" como opção.
+
+---
+
 <!-- Repita o bloco acima para cada interação com a IA -->
 
 &nbsp;
