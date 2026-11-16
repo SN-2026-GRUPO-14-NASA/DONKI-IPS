@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CoronaFlux · Choques Interplanetários (DONKI-IPS)</title>
+<title>DONKI-IPS · Choques Interplanetários</title>
 <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <meta name="description" content="Painel 3D dos choques interplanetários registrados pela NASA (DONKI/IPS), com dados de CMEs, tempestades geomagnéticas e posições do JPL Horizons.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -62,10 +62,10 @@ header.topo {
 }
 .marca { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .marca img { width: 40px; height: 40px; flex: none; }
-.marca h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .01em; line-height: 1; }
-.marca h1 .corona { background: linear-gradient(90deg, var(--yellow), var(--orange)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.marca h1 .flux { color: var(--blue); }
-.marca .projeto { font-family: var(--mono); font-size: 11px; color: var(--gold); border: 1px solid #4a3a16; border-radius: 4px; padding: 1px 6px; }
+.marca h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .04em; line-height: 1; }
+.marca h1 .donki { background: linear-gradient(90deg, var(--yellow), var(--orange)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.marca h1 .sep { color: var(--gold); margin: 0 1px; }
+.marca h1 .ips { color: var(--blue); }
 .marca p { margin: 0; color: var(--text-secondary); font-size: 13px; }
 .status {
   display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary);
@@ -235,9 +235,8 @@ footer a { color: var(--text-secondary); }
 <header class="topo">
   <div class="marca">
     <img src="assets/logo.svg" alt="" width="40" height="40">
-    <h1><span class="corona">Corona</span><span class="flux">Flux</span></h1>
+    <h1><span class="donki">DONKI</span><span class="sep">·</span><span class="ips">IPS</span></h1>
     <p>Choques interplanetários registrados pela NASA</p>
-    <span class="projeto">DONKI·IPS</span>
   </div>
   <div class="status" id="status" title="Última execução do pipeline (tabela execucoes)">
     <span class="ponto"></span><span>Carregando…</span>
@@ -352,7 +351,7 @@ footer a { color: var(--text-secondary); }
   <a href="https://ssd.jpl.nasa.gov/horizons/" target="_blank" rel="noopener">JPL Horizons</a> ·
   Pipeline: GitHub Actions → Supabase → GitHub Pages ·
   <a href="https://github.com/SN-2026-GRUPO-14-NASA/DONKI-IPS" target="_blank" rel="noopener">Repositório</a> ·
-  CoronaFlux — projeto DONKI-IPS do SN-2026-GRUPO-14-NASA
+  DONKI-IPS — SN-2026-GRUPO-14-NASA
 </footer>
 
 <script type="module">

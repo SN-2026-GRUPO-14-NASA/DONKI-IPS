@@ -452,6 +452,25 @@ vamos repensar a paleta de cores, queria algo dourado, laranja, amarelo, e azul 
 
 ---
 
+## Interação 23 — Volta ao nome DONKI-IPS
+
+**Data:** 16-11-2026
+**Objetivo:** Retomar o nome original do projeto, mantendo a identidade visual criada na Interação 22.
+
+**Prompt enviado à IA:**
+
+```
+troque o nome para o nome antigo,  mas mantenha a identidade visual
+```
+
+**Resumo da resposta:** A IA substituiu "CoronaFlux" por "DONKI·IPS" no cabeçalho, no título da aba, no rodapé, no README e no texto alternativo da logo. Manteve a logo (Sol com linhas de campo magnético), a paleta azul-marinho/dourado/laranja/amarelo/azul e o degradê: "DONKI" em amarelo→laranja, o ponto em dourado e "IPS" em azul. Removeu a etiqueta "DONKI·IPS" ao lado do nome, que ficou redundante.
+
+**O que funcionou:** Troca aplicada sem alterar cores, logo ou funcionalidades.
+
+**O que precisou ajuste:** —
+
+---
+
 <!-- Repita o bloco acima para cada interação com a IA -->
 
 &nbsp;
