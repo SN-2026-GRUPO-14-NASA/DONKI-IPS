@@ -1,8 +1,8 @@
-# Reflexão sobre o uso de IA no CoronaFlux
+# Reflexão sobre o uso de IA no DONKI-IPS
 
 ## Como usamos a IA
 
-Usamos o Claude durante o desenvolvimento do CoronaFlux para entender a API, organizar as etapas e produzir boa parte do código do projeto. A ajuda incluiu o banco de dados, o script de coleta, o workflow do GitHub Actions, o painel e as correções que surgiram nos testes. Também usamos suas explicações para entender melhor os dados que seriam apresentados.
+Usamos o Claude durante o desenvolvimento do DONKI-IPS para entender a API, organizar as etapas e produzir boa parte do código do projeto. A ajuda incluiu o banco de dados, o script de coleta, o workflow do GitHub Actions, o painel e as correções que surgiram nos testes. Também usamos suas explicações para entender melhor os dados que seriam apresentados.
 
 Lorenzo ficou responsável pela maior parte dos componentes técnicos e pela integração dessas partes. Vitor e Cauan acompanharam o desenvolvimento, deram sugestões e ficaram responsáveis pela documentação e pela apresentação. As decisões sobre o que acrescentar ao painel foram discutidas pelo grupo.
 

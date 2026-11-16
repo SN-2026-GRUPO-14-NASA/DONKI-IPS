@@ -1,4 +1,4 @@
-# CoronaFlux
+# DONKI-IPS
 
 Painel de choques interplanetários com dados da NASA DONKI/IPS. O projeto coleta os eventos automaticamente, armazena os resultados no Supabase e apresenta os dados em uma interface web publicada no GitHub Pages.
 
@@ -11,7 +11,7 @@ A **DONKI/IPS é a fonte principal**. DONKI/CME, DONKI/GST e JPL Horizons são u
 | Grupo | 14 |
 | Organização | [SN-2026-GRUPO-14-NASA](https://github.com/SN-2026-GRUPO-14-NASA) |
 | Repositório | [DONKI-IPS](https://github.com/SN-2026-GRUPO-14-NASA/DONKI-IPS) |
-| Painel | [Abrir CoronaFlux](https://sn-2026-grupo-14-nasa.github.io/DONKI-IPS/) |
+| Painel | [Abrir o painel DONKI-IPS](https://sn-2026-grupo-14-nasa.github.io/DONKI-IPS/) |
 | Projeto Supabase | DONKI-IPS-DB |
 | Região prevista para o banco | South America — São Paulo |
 | Período de desenvolvimento informado pelo grupo | 11 a 13 de novembro de 2026 |
@@ -56,7 +56,7 @@ O GitHub Actions executa `scripts/fetch_nasa.py`. O script consulta IPS e fontes
 | Caminho | Conteúdo |
 | --- | --- |
 | `index.html` | Painel web. |
-| `assets/logo.svg` | Logo do CoronaFlux. |
+| `assets/logo.svg` | Logo do DONKI-IPS. |
 | `scripts/fetch_nasa.py` | Pipeline de coleta e enriquecimento. |
 | `sql/setup.sql` | Tabelas, índices, UNIQUE, RLS e permissões. |
 | `.github/workflows/update-data.yml` | Workflow da coleta. |

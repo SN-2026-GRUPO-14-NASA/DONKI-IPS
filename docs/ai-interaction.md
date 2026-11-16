@@ -8,7 +8,7 @@
 | --- | --- |
 | **Grupo** | Grupo 14 — SN-2026-GRUPO-14-NASA |
 | **Integrantes** | Vitor, Lorenzo e Cauan |
-| **Projeto** | CoronaFlux |
+| **Projeto** | DONKI-IPS |
 | **API NASA escolhida** | DONKI/IPS |
 | **Fontes complementares discutidas e escolhidas no histórico** | DONKI/CME, DONKI/GST e JPL Horizons |
 | **IA utilizada** | Claude — Anthropic |
@@ -1155,9 +1155,42 @@ Assim o painel fica com a marca CoronaFlux e continua identificado como DONKI-IP
 
 ---
 
+## Interação 25 — Volta ao nome DONKI-IPS
+
+**Data:** 16/11/2026
+
+**Objetivo:** Retomar o nome original do projeto, mantendo a identidade visual definida na Interação 24.
+
+**Prompt enviado à IA:**
+
+````text
+troque o nome para o nome antigo,  mas mantenha a identidade visual
+````
+
+**Resumo da resposta:**
+
+A IA substituiu CoronaFlux por DONKI·IPS no cabeçalho, no título da aba, no rodapé e no texto alternativo da logo, mantendo a logo, a paleta e os degradês. No envio, o push foi recusado porque o repositório tinha documentos novos do grupo; a IA comparou as versões e aplicou a troca de nome sobre a documentação mais recente, em vez de sobrescrevê-la.
+
+**O que funcionou:**
+
+A troca de nome preservou a identidade visual e as funcionalidades do painel, testadas no computador e no celular.
+
+**O que precisou ajuste:**
+
+O push foi recusado por causa de alterações feitas por outro integrante no GitHub. Foi necessário integrar as duas versões antes de enviar. Os PDFs do tutorial e da apresentação ainda citam CoronaFlux e precisam ser atualizados a partir dos arquivos-fonte.
+
+<details>
+<summary>Resposta da IA</summary>
+
+O nome voltou a ser DONKI·IPS: "DONKI" em degradê amarelo para laranja, o ponto em dourado e "IPS" em azul, ao lado da mesma logo. Título da aba, rodapé e texto alternativo da logo também usam DONKI-IPS. Logo, paleta, linha sob o cabeçalho, cores dos dados e funcionalidades continuam iguais. A etiqueta "DONKI·IPS" ao lado do nome foi removida por ficar repetida.
+
+</details>
+
+---
+
 ## Resumo final
 
-**Total de interações:** 24.
+**Total de interações:** 25.
 
 **Principais contribuições da IA:**
 
@@ -1165,7 +1198,7 @@ Assim o painel fica com a marca CoronaFlux e continua identificado como DONKI-IP
 - Revisão da sequência de trabalho, da estrutura do repositório, do SQL, das permissões e do workflow.
 - Orientação sobre autenticação, carga histórica, atualização incremental, deduplicação e logs.
 - Discussão do painel, do mapa 3D, dos filtros e do enriquecimento por CME, GST e Horizons.
-- Diagnóstico das falhas, sugestões de funcionalidades e definição do nome e da identidade visual CoronaFlux.
+- Diagnóstico das falhas, sugestões de funcionalidades e definição da identidade visual (nome CoronaFlux, depois substituído por DONKI-IPS).
 
 **Principais limitações encontradas:**
 
